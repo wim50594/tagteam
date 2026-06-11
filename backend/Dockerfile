@@ -1,18 +1,11 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir \
-    fastapi==0.111.0 \
-    uvicorn[standard]==0.29.0 \
-    redis==5.0.4 \
-    aiofiles==23.2.1 \
-    pandas==2.2.2 \
-    openpyxl==3.1.2 \
-    python-multipart==0.0.9 \
-    pydantic==2.7.1
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
-COPY main.py .
+COPY app .
 
 RUN mkdir -p /app/data/media
 

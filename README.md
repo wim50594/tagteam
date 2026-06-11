@@ -1,83 +1,68 @@
-# 🏷️ MultiTag Suite v3.0
+# 🏷️ TagTeam
 
-Universal annotation tool für Bilder, PDFs, Texte und Literatur (CSV/XLSX).
+A universal annotation tool for images, PDFs, texts, and spreadsheets designed for seamless team collaboration and structured taxonomies.
 
-## Schnellstart
+## 🚀 Quick Start
+
+1. **Setup Environment**:
+```bash
+   cp env.example .env
+```
+
+Open `.env` to configure your settings. Change the default admin password (`ADMIN_PASSWORD`) used for automatic admin account bootstrapping on first startup.
+
+2. **Launch with Docker**:
+```bash
+docker compose up
+```
+
+
+3. **Access the App**:  
+Open your browser and navigate to http://localhost:3000
+
+
+## ✨ Core Features
+
+- **Multi-Format Visual Workspace**: Streamlined annotation interface with instant preview support for Images, PDFs, Plain Text, and Tabular data (CSV/XLSX).
+- **Smart Hierarchical Taxonomies**: Support for both flat lists and multi-level hierarchies with fast autocompletion and automatic parent-ancestor tagging.
+- **Collaborative Workflows**: Flexible task distribution among annotators, featuring a **Cross-Validation Mode** to assign identical data to multiple team members for quality control.
+- **Conflict Resolution (Merge Mode)**: A dedicated admin review interface to easily track team progress, inspect annotator disagreements, and merge conflicting labels into a finalized output.
+
+## ⚙️ Configuration & Setup
+
+TagTeam is fully configured using environment variables. Before starting the containers, create your `.env` file from the template:
 
 ```bash
-docker compose up --build
+cp env.example .env
 ```
 
-Dann im Browser öffnen: **http://localhost:3000**
+### Key Environment Variables (`.env`)
 
-## Features
+* `ADMIN_USERNAME`: Username of the initial bootstrap administrator account (Default: `admin`).
+* `ADMIN_PASSWORD`: **Change this immediately** to secure your deployment. This password is bootstrapped into the persistent layer on the very first container initialization.
+* `JWT_SECRET`: A long, random secret key utilized to sign secure JSON Web Tokens for user authentication.
 
-- **Universeller Upload**: Bilder (PNG/JPG/GIF/WEBP/SVG), PDFs, Texte (TXT/MD), Tabellen (CSV/TSV/XLSX)
-- **Ordner-Upload**: Komplette Ordnerstrukturen per Drag & Drop oder Klick hochladbar
-- **Hierarchische Taxonomie**: CSV/TSV (mehrere Spalten = Hierarchieebenen) oder TXT (Zeilen, `>` als Trennzeichen)
-  - Auto-Ancestor-Zuweisung: Wenn du `Logistics` wählst und es unter `Travel` liegt, werden beide Tags gesetzt
-- **Multi-Annotator**: Beliebig viele Personen, Round-Robin oder Verifizierungsmodus
-- **Tag-Suche**: Klick für Top-Level-Vorschläge, Tippen für Autocomplete
-- **Persistenz**: Redis speichert alles, Container kann gestoppt/neugestartet werden
-- **Export**: CSV (raw pro Annotator, oder merged/konsolidiert)
-- **Konfliktauflösung**: Im Verifizierungsmodus werden Widersprüche angezeigt und können manuell aufgelöst werden
+### Taxonomy Label Formats
 
-## Datenhaltung
+When creating a project, you can import labels using either a flat or a hierarchical list:
 
-```
-multitag/
-├── data/
-│   ├── media/     ← Hochgeladene Bilder, PDFs etc. (Docker Volume)
-│   └── redis/     ← Redis AOF-Persistenz (Docker Volume)
+#### 1. Flat Taxonomy (Plain Text `.txt`)
+
+A simple line-by-line list for un-nested, standard labeling:
+
+```text
+bird
+dog
+cat
 ```
 
-Beide Ordner sind Docker Volumes – Daten bleiben beim `docker compose stop/start` erhalten.
+#### 2. Hierarchical Taxonomy (Delimited CSV/TSV)
 
-## Kubernetes
+A multi-level matrix where columns represent structural taxonomy depth. Selecting a deeper tier automatically maps higher-level ancestors:
 
-Für Kubernetes kannst du die Volumes als PersistentVolumeClaims deklarieren:
-
-```yaml
-# PVC für Media-Dateien
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: multitag-media-pvc
-spec:
-  accessModes: [ReadWriteMany]
-  resources:
-    requests:
-      storage: 10Gi
----
-# PVC für Redis
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: multitag-redis-pvc
-spec:
-  accessModes: [ReadWriteOnce]
-  resources:
-    requests:
-      storage: 2Gi
-```
-
-## Taxonomie-Format
-
-**CSV (hierarchisch)**:
 ```csv
-Kategorie,Unterkategorie,Tag
-Natur,Tiere,Hund
-Natur,Tiere,Katze
-Natur,Pflanzen,Baum
+Tier 1;Tier 2;Tier 3
+Attractions;Amusement and Theme Parks;
+Automotive;Auto Body Styles;Convertible
+Automotive;Auto Body Styles;Coupe
 ```
-
-**TXT (flach oder hierarchisch mit `>`)**:
-```
-Natur > Tiere > Hund
-Natur > Tiere > Katze
-Technik > Software > Python
-```
-
-## Projekt löschen
-
-Im Home-Screen auf "Löschen" klicken – löscht Session, Labels und alle zugehörigen Mediendateien.

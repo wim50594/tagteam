@@ -1,13 +1,12 @@
 services:
   backend:
     build: ./backend
-    container_name: multitag-backend
     ports:
       - "8000:8000"
     volumes:
-      - ./data/media:/app/data/media
-    environment:
-      - REDIS_URL=redis://redis:6379
+      - ./data/backend:${MEDIA_DIR}
+    env_file:
+      - .env
     depends_on:
       redis:
         condition: service_healthy
@@ -15,7 +14,6 @@ services:
 
   frontend:
     build: ./frontend
-    container_name: multitag-frontend
     ports:
       - "3000:80"
     depends_on:
@@ -24,9 +22,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: multitag-redis
-    ports:
-      - "6379:6379"
     volumes:
       - ./data/redis:/data
     command: redis-server --appendonly yes --save 60 1

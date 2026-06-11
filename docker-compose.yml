@@ -1,6 +1,8 @@
 services:
   backend:
+    image: lehrstuhlkesdogan/tagteam-backend:latest
     build: ./backend
+    pull_policy: build
     ports:
       - "8000:8000"
     volumes:
@@ -13,7 +15,9 @@ services:
     restart: unless-stopped
 
   frontend:
+    image: lehrstuhlkesdogan/tagteam-frontend:latest
     build: ./frontend
+    pull_policy: build
     ports:
       - "3000:80"
     depends_on:
@@ -21,7 +25,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     volumes:
       - ./data/redis:/data
     command: redis-server --appendonly yes --save 60 1

@@ -8,12 +8,12 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    admin_password: str
+    jwt_secret: str
+    admin_username: str = "admin"
     redis_url: str = "redis://redis:6379"
-    jwt_secret: str = "insecure_dev_secret"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 480
-    admin_username: str = "admin"
-    admin_password: str = "changeme123"
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
     media_dir: str = "/app/data/media"
 
@@ -34,4 +34,4 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    return Settings.model_validate({})

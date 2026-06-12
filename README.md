@@ -4,21 +4,63 @@ A universal annotation tool for images, PDFs, texts, and spreadsheets designed f
 
 ## 🚀 Quick Start
 
-1. **Setup Environment**:
+### Setup environment
 ```bash
-   cp env.example .env
+cp env.example .env
 ```
 
-Open `.env` to configure your settings. Change the default admin password (`ADMIN_PASSWORD`) used for automatic admin account bootstrapping on first startup.
+**Important**: Generate a strong JWT_SECRET BEFORE starting containers:
+```bash
+# Generate random secret
+sed -i '' "s/^#[[:space:]]*JWT_SECRET=.*/JWT_SECRET=$(openssl rand -hex 32)/" .env
+sed -i '' "s/^#[[:space:]]*ADMIN_PASSWORD=.*/ADMIN_PASSWORD=changeme123/" .env
+```
 
-2. **Launch with Docker**:
+### Start production locally
 ```bash
 docker compose up
 ```
 
+Then access:
+- Frontend: http://localhost:3000
+- Login: `admin` / `changeme123` (from `.env`)
 
-3. **Access the App**:  
-Open your browser and navigate to http://localhost:3000
+## 🔧 Local Development
+
+### Option A: Pure local (fastest - no Docker)
+
+**Backend** (one terminal):
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Frontend** (another terminal):
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Then open:
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8000
+
+This provides instant hot reload for both frontend and backend code changes.
+
+### Option B: Docker with hot reload
+
+If you prefer containers with hot reload:
+```bash
+docker compose -f docker-compose.dev.yml up
+```
+
+This starts:
+- Frontend dev server: http://localhost:5173 (hot reload enabled)
+- Backend: http://localhost:8000 (uvicorn --reload)
 
 
 ## ✨ Core Features

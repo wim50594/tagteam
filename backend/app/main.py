@@ -29,7 +29,7 @@ async def lifespan(_app: FastAPI):
 settings = get_settings()
 
 app = FastAPI(
-    title="MultiTag Suite API",
+    title="TagTeam API",
     version="2.0.0",
     lifespan=lifespan,
 )

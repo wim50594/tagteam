@@ -3,10 +3,8 @@ services:
     image: lehrstuhlkesdogan/tagteam-backend:latest
     build: ./backend
     pull_policy: build
-    ports:
-      - "8000:8000"
     volumes:
-      - ./data/backend:${MEDIA_DIR}
+      - ./data/backend:${MEDIA_DIR:-/app/data/media}
     env_file:
       - .env
     depends_on:

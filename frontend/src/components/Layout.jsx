@@ -1,4 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { formatVersionBadge, useVersion } from '../lib/version'
 
 import { useAuth } from '../lib/auth'
 
@@ -11,6 +12,7 @@ export default function Layout() {
   const { user, isAdmin, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const version = useVersion()
 
   const handleLogout = () => { logout(); navigate('/login') }
 
@@ -37,7 +39,7 @@ export default function Layout() {
             <span className="text-xl">🏷️</span>
             <span className="font-black text-indigo-600 tracking-tight text-lg">TagTeam</span>
             <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-semibold">
-              v2
+              {formatVersionBadge(version)}
             </span>
           </Link>
 

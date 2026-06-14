@@ -8,9 +8,17 @@ services:
     env_file:
       - .env
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 5
 
   frontend:
     image: lehrstuhlkesdogan/tagteam-frontend:latest
@@ -19,14 +27,32 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: tagteam
+      POSTGRES_PASSWORD: tagteam
+      POSTGRES_DB: tagteam
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tagteam"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Optional cache layer. The backend works fine without it (it falls
+  # back to querying Postgres directly), but enabling it speeds up
+  # frequently-read sessions/items/progress.
   redis:
     image: redis:8-alpine
     volumes:
       - ./data/redis:/data
-    command: redis-server --appendonly yes --save 60 1
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]

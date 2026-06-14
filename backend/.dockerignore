@@ -1,8 +1,9 @@
-__pycache__/
-*.py[cod]
-*.pyo
-*.env
-*.venv
-venv/
+.venv
+__pycache__
+*.pyc
+.git
+.ruff_cache
+.mypy_cache
+.pytest_cache
+data
 .env
-.DS_Store

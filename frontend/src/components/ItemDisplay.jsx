@@ -28,6 +28,23 @@ export default function ItemDisplay({ item, displayColumns = [] }) {
     </div>
   )
 
+  if (item.type === 'document') return (
+    <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
+      <div className="text-5xl">📄</div>
+      <p className="text-sm font-semibold text-slate-700 truncate max-w-full">{item.name}</p>
+      <p className="text-xs text-slate-400">
+        No inline preview available for this document type.
+      </p>
+      <a
+        href={api.mediaUrl(item.filename)}
+        download={item.name}
+        className="btn-secondary !px-3 !py-1.5 !text-xs"
+      >
+        Download to view
+      </a>
+    </div>
+  )
+
   if (item.type === 'text') return (
     <div className="h-full overflow-y-auto">
       <p className="text-xs font-bold text-slate-500 mb-2">{item.name}</p>

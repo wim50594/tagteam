@@ -1,16 +1,16 @@
 """
-MultiTag Suite – FastAPI application entry point.
+TagTeam Suite – FastAPI application entry point.
 Mounts all routers; handles lifespan events.
 """
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-import database as db
 from auth import ensure_bootstrap_admin
 from config import get_settings
+from database import async_session_factory, connect_cache, disconnect_cache, init_db
 from routes.auth_routes import router as auth_router
 from routes.session_routes import router as session_router
 from routes.upload_routes import router as upload_router
@@ -19,18 +19,20 @@ from routes.upload_routes import router as upload_router
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Startup
-    await db.connect()
-    await ensure_bootstrap_admin()
+    await init_db()
+    await connect_cache()
+    async with async_session_factory() as session:
+        await ensure_bootstrap_admin(session)
     yield
     # Shutdown
-    await db.disconnect()
+    await disconnect_cache()
 
 
 settings = get_settings()
 
 app = FastAPI(
     title="TagTeam API",
-    version="2.0.0",
+    version="2.1.0",
     lifespan=lifespan,
 )
 
@@ -51,12 +53,11 @@ app.include_router(session_router)
 # ── Utility endpoints ─────────────────────────────────────────
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "4.0.0"}
+    return {"status": "ok", "version": "3.1.0"}
 
 
 @app.get("/api/media/{filename:path}")
 async def get_media(filename: str):
-    from fastapi import HTTPException
     file_path = settings.media_path / filename
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")

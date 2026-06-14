@@ -6,13 +6,14 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    defaults: { run: { working-directory: backend } }
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12", cache: pip }
-      - run: pip install -r backend/requirements.txt ruff
-      - run: ruff check backend/app
-      - run: python -m compileall backend/app
+      - uses: astral-sh/setup-uv@v3
+        with: { python-version: "3.12" }
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run python -m compileall .
 
   frontend:
     runs-on: ubuntu-latest

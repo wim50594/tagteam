@@ -8,6 +8,7 @@ frontend/dist
 # Python artifacts
 backend/__pycache__
 backend/*.py[cod]
+backend/.venv
 
 # Editor configs
 .vscode

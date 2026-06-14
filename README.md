@@ -1,6 +1,6 @@
 # 🏷️ TagTeam
 
-A universal annotation tool for images, PDFs, texts, and spreadsheets designed for seamless team collaboration and structured taxonomies.
+A universal annotation tool for images, PDFs, Word documents, texts, and spreadsheets designed for seamless team collaboration and structured taxonomies.
 
 ## 🚀 Quick Start
 
@@ -32,11 +32,14 @@ Then access:
 **Backend** (one terminal):
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uv sync
+uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+This uses [uv](https://docs.astral.sh/uv/) for dependency management. `uv sync`
+creates a `.venv` and installs everything from `pyproject.toml` /
+`uv.lock`. No need to manually create or activate a virtualenv — `uv run`
+handles that for you.
 
 **Frontend** (another terminal):
 ```bash
@@ -60,12 +63,12 @@ docker compose -f docker-compose.dev.yml up
 
 This starts:
 - Frontend dev server: http://localhost:5173 (hot reload enabled)
-- Backend: http://localhost:8000 (uvicorn --reload)
+- Backend: http://localhost:8000 (uvicorn --reload, dependencies managed via uv)
 
 
 ## ✨ Core Features
 
-- **Multi-Format Visual Workspace**: Streamlined annotation interface with instant preview support for Images, PDFs, Plain Text, and Tabular data (CSV/XLSX).
+- **Multi-Format Visual Workspace**: Streamlined annotation interface with instant preview support for Images, PDFs, Word documents, Plain Text, and Tabular data (CSV/TSV/XLSX).
 - **Smart Hierarchical Taxonomies**: Support for both flat lists and multi-level hierarchies with fast autocompletion and automatic parent-ancestor tagging.
 - **Collaborative Workflows**: Flexible task distribution among annotators, featuring a **Cross-Validation Mode** to assign identical data to multiple team members for quality control.
 - **Conflict Resolution (Merge Mode)**: A dedicated admin review interface to easily track team progress, inspect annotator disagreements, and merge conflicting labels into a finalized output.
@@ -80,9 +83,24 @@ cp env.example .env
 
 ### Key Environment Variables (`.env`)
 
+* `DATABASE_URL`: Connection string for the primary database (PostgreSQL recommended for production, SQLite for local dev).
+* `REDIS_URL`: Optional cache layer. If unset, caching is disabled and the app reads/writes the database directly.
 * `ADMIN_USERNAME`: Username of the initial bootstrap administrator account (Default: `admin`).
 * `ADMIN_PASSWORD`: **Change this immediately** to secure your deployment. This password is bootstrapped into the persistent layer on the very first container initialization.
 * `JWT_SECRET`: A long, random secret key utilized to sign secure JSON Web Tokens for user authentication.
+
+### Supported File Types
+
+Uploaded files are classified by inspecting their actual content (not just
+the extension):
+
+| Category   | Formats                                  | Preview                          |
+|------------|-------------------------------------------|-----------------------------------|
+| `image`    | PNG, JPEG, GIF, WEBP, BMP, TIFF, ...       | Inline image                      |
+| `pdf`      | PDF                                        | Inline embedded viewer            |
+| `document` | Word (`.docx`)                            | Download link (no inline preview) |
+| `table`    | CSV, TSV, XLSX, XLS                        | Per-row annotation view           |
+| `text`     | TXT, MD, JSON, YAML                        | Inline text view                  |
 
 ### Taxonomy Label Formats
 

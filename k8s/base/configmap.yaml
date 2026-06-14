@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tagteam-config
+  namespace: tagteam
+data:
+  REDIS_URL: "redis://redis:6379"
+  CACHE_TTL_SECONDS: "300"
+  JWT_ALGORITHM: "HS256"
+  JWT_EXPIRE_MINUTES: "480"
+  ADMIN_USERNAME: "admin"
+  CORS_ORIGINS: "https://CHANGEME_HOST"
+  MEDIA_DIR: "/app/data/media"

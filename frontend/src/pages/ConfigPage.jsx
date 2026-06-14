@@ -1,16 +1,17 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { api } from '../lib/api'
-import { buildBatches, batchSummary } from '../lib/batches'
+import { batchSummary, buildBatches } from '../lib/batches'
+import { useEffect, useMemo, useState } from 'react'
+
 import DropZone from '../components/DropZone'
 import UserAutocomplete from '../components/UserAutocomplete'
+import { api } from '../lib/api'
+import { useNavigate } from 'react-router-dom'
 
 const STEPS = [
   { id: 1, label: 'Data', icon: '📥' },
   { id: 2, label: 'Taxonomy', icon: '🗂️' },
   { id: 3, label: 'Team & Start', icon: '🚀' },
 ]
-const TYPE_ICONS = { images: '🖼️', pdfs: '📄', texts: '📝', tables: '📊' }
+const TYPE_ICONS = { images: '🖼️', pdfs: '📄', documents: '📃', texts: '📝', tables: '📊' }
 
 const formatBytes = (n) => {
   if (!n) return '0 B'
@@ -54,13 +55,14 @@ export default function ConfigPage() {
 
   // FIX 1: Accurate unique item counts for the statistics blocks
   const stats = useMemo(() => {
-    const s = { images: 0, pdfs: 0, texts: 0, tables: 0 }
+    const s = { images: 0, pdfs: 0, documents: 0, texts: 0, tables: 0 }
     for (const f of uploadedFiles) {
       const key =
-        f.category === 'image' ? 'images' :
-        f.category === 'pdf'   ? 'pdfs'   :
-        f.category === 'text'  ? 'texts'  :
-        f.category === 'table' ? 'tables' : null
+        f.category === 'image'    ? 'images'    :
+        f.category === 'pdf'      ? 'pdfs'      :
+        f.category === 'document' ? 'documents' :
+        f.category === 'text'     ? 'texts'     :
+        f.category === 'table'    ? 'tables'    : null
       if (key) s[key] += 1 // Count each row/file as exactly 1 item
     }
     return s
@@ -104,7 +106,7 @@ export default function ConfigPage() {
     files.forEach((f) => fd.append('files', f))
 
     try {
-      const d = await api.post('/api/upload-universal', { form: fd })
+      const d = await api.post('/api/upload/items', { form: fd })
       const incoming = d.files || []
 
       // Client-side dedup against already-listed items in this draft.
@@ -169,7 +171,7 @@ export default function ConfigPage() {
     fd.append('file', files[0])
     fd.append('has_header', 'true')
     try {
-      const d = await api.post('/api/parse-labels', { form: fd })
+      const d = await api.post('/api/upload/labels', { form: fd })
       setTaxonomy(d.taxonomy || [])
       setTaxStatus(`✅ ${(d.taxonomy || []).length} labels loaded from "${files[0].name}"`)
     } catch (e) { alert('Taxonomy upload failed: ' + e.message) }
@@ -234,7 +236,7 @@ export default function ConfigPage() {
           <div>
             <h2 className="text-lg font-bold text-slate-900">Step 1: Upload data</h2>
             <p className="text-sm text-slate-500 mt-1">
-              Supported: images (PNG/JPG/GIF/WEBP/SVG), PDFs, text (TXT/MD), spreadsheets (CSV/TSV/XLSX)
+              Supported: images (PNG/JPG/GIF/WEBP/SVG), PDFs, Word documents (DOCX), text (TXT/MD), spreadsheets (CSV/TSV/XLSX)
             </p>
           </div>
 

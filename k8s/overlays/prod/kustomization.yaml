@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: tagteam
+resources:
+  - ../../base
+images:
+  - name: lehrstuhlkesdogan/tagteam-backend
+    newTag: latest
+  - name: lehrstuhlkesdogan/tagteam-frontend
+    newTag: latest

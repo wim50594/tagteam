@@ -126,3 +126,14 @@ Attractions;Amusement and Theme Parks;
 Automotive;Auto Body Styles;Convertible
 Automotive;Auto Body Styles;Coupe
 ```
+
+## 🏗️ Building from Source
+If you have made custom changes to the source code or need to build the production Docker images locally before deploying (e.g., if the remote images do not exist yet), you can explicitly force Docker Compose to build them.
+
+```bash
+# Force Docker to build backend and frontend production images from source code
+docker compose build
+
+# Start the newly built local stack
+docker compose up
+```

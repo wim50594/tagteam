@@ -1,8 +1,7 @@
 services:
   backend:
     image: lehrstuhlkesdogan/tagteam-backend:latest
-    #build: ./backend
-    #pull_policy: build
+    build: ./backend
     volumes:
       - ./data/backend:${MEDIA_DIR:-/app/data/media}
     env_file:
@@ -22,8 +21,7 @@ services:
 
   frontend:
     image: lehrstuhlkesdogan/tagteam-frontend:latest
-    #build: ./frontend
-    # pull_policy: build
+    build: ./frontend
     ports:
       - "3000:80"
     depends_on:

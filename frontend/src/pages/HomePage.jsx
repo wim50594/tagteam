@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+
+import { TYPE_ICONS } from '../lib/constants'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
-
-const TYPE_ICONS = { images: '🖼️', pdfs: '📄', texts: '📝', tables: '📊', svgs: '🎨' }
+import { useNavigate } from 'react-router-dom'
 
 export default function HomePage() {
   const { isAdmin } = useAuth()

@@ -2,6 +2,7 @@ import { batchSummary, buildBatches } from '../lib/batches'
 import { useEffect, useMemo, useState } from 'react'
 
 import DropZone from '../components/DropZone'
+import { TYPE_ICONS } from '../lib/constants'
 import UserAutocomplete from '../components/UserAutocomplete'
 import { api } from '../lib/api'
 import { useNavigate } from 'react-router-dom'
@@ -11,7 +12,6 @@ const STEPS = [
   { id: 2, label: 'Taxonomy', icon: '🗂️' },
   { id: 3, label: 'Team & Start', icon: '🚀' },
 ]
-const TYPE_ICONS = { images: '🖼️', pdfs: '📄', documents: '📃', texts: '📝', tables: '📊' }
 
 const formatBytes = (n) => {
   if (!n) return '0 B'

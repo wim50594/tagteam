@@ -1,7 +1,7 @@
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { formatVersionBadge, useVersion } from '../lib/version'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { formatVersionBadge, useVersion } from '../lib/version';
 
-import { useAuth } from '../lib/auth'
+import { useAuth } from '../lib/auth';
 
 const ROLE_BADGE = {
   admin: 'bg-violet-100 text-violet-800 border-violet-200',
@@ -37,7 +37,7 @@ export default function Layout() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition">
             <span className="text-xl">🏷️</span>
-            <span className="font-black text-indigo-600 tracking-tight text-lg">TagTeam</span>
+            <span className="font-black text-indigo-600 tracking-tight text-lg">{APP_NAME}</span>
             <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-semibold">
               {formatVersionBadge(version)}
             </span>

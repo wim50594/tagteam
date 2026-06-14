@@ -32,7 +32,7 @@ settings = get_settings()
 
 app = FastAPI(
     title="TagTeam API",
-    version="2.1.0",
+    version=settings.app_version,
     lifespan=lifespan,
 )
 
@@ -53,7 +53,7 @@ app.include_router(session_router)
 # ── Utility endpoints ─────────────────────────────────────────
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "3.1.0"}
+    return {"status": "ok", "version": settings.app_version}
 
 
 @app.get("/api/media/{filename:path}")

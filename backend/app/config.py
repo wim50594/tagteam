@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
     media_dir: str = "/app/data/media"
 
+    # App version, baked into the image at build time from the release's
+    # git tag (see Dockerfile ARG/ENV and .github/workflows/release.yml).
+    # "dev" is the default for local/dev runs where no tag applies.
+    app_version: str = "dev"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

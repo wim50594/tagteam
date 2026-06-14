@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { api } from "../lib/api";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+
 import ItemDisplay from "../components/ItemDisplay";
+import { api } from "../lib/api";
+import { APP_NAME } from '../lib/constants';
 
 export default function ReviewPage() {
   const { sessionId } = useParams();
@@ -61,7 +63,7 @@ export default function ReviewPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `multitag_${sessionId.slice(0, 8)}_${exportMode}.csv`;
+    a.download = `${APP_NAME.toLowerCase()}_${sessionId.slice(0, 8)}_${exportMode}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };

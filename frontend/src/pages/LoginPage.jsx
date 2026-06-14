@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
+import { APP_NAME } from '../lib/constants'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -30,7 +31,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <span className="text-5xl">🏷️</span>
-          <h1 className="text-2xl font-black text-indigo-600 mt-2">MultiTag Suite</h1>
+          <h1 className="text-2xl font-black text-indigo-600 mt-2">{APP_NAME}</h1>
           <p className="text-sm text-slate-500 mt-1">Sign in to your account</p>
         </div>
 

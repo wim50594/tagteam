@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     admin_username: str = "admin"
 
     # Primary relational database (PostgreSQL, SQLite, ...)
-    database_url: str = "sqlite+aiosqlite:///./data/tagteam.db"
+    database_url: str = "sqlite+aiosqlite:////data/tagteam.db"
 
     # Redis is optional and used only as a cache. If unset, caching is
     # simply skipped and everything falls back to the RDBMS.
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 480
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
-    media_dir: str = "/app/data/media"
+    media_dir: str = "/data/media"
 
     # App version, baked into the image at build time from the release's
     # git tag (see Dockerfile ARG/ENV and .github/workflows/release.yml).

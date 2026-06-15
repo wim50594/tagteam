@@ -23,8 +23,6 @@ COPY app .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --no-dev
 
-RUN mkdir -p /app/data/media
-
 # Make the project's virtualenv the default Python.
 ENV PATH="/app/.venv/bin:$PATH"
 

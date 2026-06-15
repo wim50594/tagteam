@@ -1,18 +1,5 @@
 """
 Database access layer.
-
-- SQLModel + SQLAlchemy async engine is the system of record (Postgres,
-  SQLite, etc., depending on DATABASE_URL).
-- Redis is only a cache. It is optional: if REDIS_URL is unset or
-  unreachable, the cache helpers become no-ops and everything still works
-  purely against the RDBMS.
-
-NOTE: We use sqlmodel.ext.asyncio.session.AsyncSession (not
-sqlalchemy.ext.asyncio.AsyncSession) because it additionally provides the
-`.exec()` method used throughout the routes (a thin, type-friendly wrapper
-around `.execute()` for SQLModel `select()` statements). It's a subclass of
-SQLAlchemy's AsyncSession, so `.execute()`, `.get()`, `.commit()`, etc. all
-still work as usual.
 """
 from __future__ import annotations
 

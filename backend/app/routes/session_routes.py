@@ -111,6 +111,16 @@ async def _attach_session_to_items(
         await _gc_item(db, item_id)
 
 
+def _collapse_hierarchy(labels: list[str]) -> list[str]:
+    """Keep only the deepest label per hierarchy path.
+
+    "Travel" is dropped if "Travel > Air" or "Travel > Air > Plane" is also
+    selected. Labels without children stay as-is.
+    """
+    labels = sorted(set(labels))
+    return [a for a in labels if not any(b != a and b.startswith(a + " > ") for b in labels)]
+
+
 # ── Sessions CRUD ─────────────────────────────────────────────
 
 @router.post("/sessions/save-full")
@@ -426,7 +436,7 @@ async def export_session(
                 agreed = list(votes.keys()) if match else []
             rows.append({
                 "item_id": item_id, "item_name": name, "item_type": typ,
-                "final_labels": " | ".join(sorted(resolved)),
+                "final_labels": " | ".join(_collapse_hierarchy(resolved)),
                 "agreed_annotators": ", ".join(agreed) if agreed else "None",
             })
     else:
@@ -437,7 +447,7 @@ async def export_session(
                 name, typ = await _item_meta(db, item_id)
                 rows.append({
                     "item_id": item_id, "item_name": name, "item_type": typ,
-                    "annotator": ann, "labels": " | ".join(sorted(labels)),
+                    "annotator": ann, "labels": " | ".join(_collapse_hierarchy(labels)),
                 })
 
     output = io.StringIO()

@@ -1,18 +1,5 @@
 """
 File upload and label parsing routes.
-
-File classification
---------------------
-Rather than relying purely on the filename extension, files are classified
-by inspecting their content:
-
-* `filetype` (magic-byte based, pure Python) identifies images and PDFs.
-* ZIP-based containers (including modern Office formats like .docx/.xlsx)
-  are detected directly via `zipfile.is_zipfile()`, which is more reliable
-  than magic-byte sniffing for small/edge-case ZIP files. A ZIP hit is then
-  disambiguated by peeking at `[Content_Types].xml` inside the archive.
-* Plain-text formats (csv/tsv/txt/md/json/yaml/...) have no magic bytes,
-  so they're identified by extension + a UTF-8 decodability check.
 """
 from __future__ import annotations
 
@@ -20,22 +7,14 @@ import hashlib
 import io
 import os
 import uuid
-import zipfile
 from dataclasses import dataclass
 from enum import Enum
 from typing import Annotated, Any, Awaitable, Callable
 
 import aiofiles
-import filetype
 import pandas as pd
 from fastapi import (
-    APIRouter,
-    Depends,
-    File,
-    Form,
-    HTTPException,
-    UploadFile,
-    status,
+    APIRouter, Depends, File, Form, HTTPException, UploadFile, status,
 )
 from pydantic import BaseModel
 from sqlmodel import select
@@ -54,12 +33,11 @@ router = APIRouter(prefix="/api", tags=["upload"])
 class FileCategory(str, Enum):
     IMAGE = "image"
     PDF = "pdf"
-    DOCUMENT = "document"  # Word/OOXML documents - preview hint only, no text extraction
+    DOCUMENT = "document"  # Word/PowerPoint - download only, no in-browser preview
     TABLE = "table"
     TEXT = "text"
 
 
-# Plural keys used in the UI / stats dict.
 STATS_KEY: dict[FileCategory, str] = {
     FileCategory.IMAGE: "images",
     FileCategory.PDF: "pdfs",
@@ -73,106 +51,30 @@ def _empty_stats() -> dict[str, int]:
     return {v: 0 for v in STATS_KEY.values()}
 
 
-# Extensions accepted for plain-text content (no reliable magic bytes).
-# Anything here is treated as FileCategory.TEXT if it decodes as UTF-8.
-TEXT_EXTENSIONS = {".txt", ".md", ".csv", ".tsv", ".json", ".yaml", ".yml"}
-
-# OOXML "Content-Type" markers used to disambiguate ZIP-based Office files.
-# https://en.wikipedia.org/wiki/Office_Open_XML
-_OOXML_MARKERS: dict[str, tuple[FileCategory, str]] = {
-    "spreadsheetml": (FileCategory.TABLE, ".xlsx"),
-    "wordprocessingml": (FileCategory.DOCUMENT, ".docx"),
-    "presentationml": (FileCategory.DOCUMENT, ".pptx"),
+# Extension-based classification. Anything not listed falls back to TEXT.
+# Images: everything the browser can natively render.
+IMAGE_EXTENSIONS = {
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg",
+    ".bmp", ".ico", ".avif", ".apng",
 }
-
-# Legacy (pre-OOXML) Office formats. These use the OLE2/CFB binary format,
-# which `filetype` recognises directly via magic bytes.
-_LEGACY_OFFICE_MIME: dict[str, tuple[FileCategory, str]] = {
-    "application/vnd.ms-excel": (FileCategory.TABLE, ".xls"),
-    "application/msword": (FileCategory.DOCUMENT, ".doc"),
-}
+PDF_EXTENSIONS = {".pdf"}
+TABLE_EXTENSIONS = {".csv", ".tsv", ".xlsx", ".xls"}
+# Office documents: stored as-is, exposed as download in the frontend.
+DOCUMENT_EXTENSIONS = {".doc", ".docx", ".ppt", ".pptx", ".odt", ".odp"}
 
 
-def _classify_zip(content: bytes, ext: str) -> tuple[FileCategory, str] | None:
-    """Peek inside a ZIP/OOXML container to tell docx from xlsx etc.
-
-    Returns (category, extension) or None if it's an unsupported/plain ZIP.
-    """
-    if not zipfile.is_zipfile(io.BytesIO(content)):
-        return None
-
-    try:
-        with zipfile.ZipFile(io.BytesIO(content)) as zf:
-            try:
-                content_types = zf.read("[Content_Types].xml").decode("utf-8", "ignore")
-            except KeyError:
-                content_types = ""
-    except zipfile.BadZipFile:
-        return None
-
-    for marker, (category, detected_ext) in _OOXML_MARKERS.items():
-        if marker in content_types:
-            return category, (ext or detected_ext)
-
-    # OOXML container but content-types didn't match a known marker
-    # (e.g. a .pptx, or an unusual variant) -> fall back on the extension
-    # if it's one we recognise.
-    if ext == ".xlsx":
-        return FileCategory.TABLE, ext
-    if ext == ".docx":
-        return FileCategory.DOCUMENT, ext
-
-    return None
-
-
-def classify(filename: str, content: bytes) -> tuple[str, FileCategory | None]:
-    """Classify file content, falling back to the filename extension.
-
-    Returns (extension-to-store, category-or-None).
-    """
+def classify(filename: str, _content: bytes) -> tuple[str, FileCategory]:
+    """Classify by filename extension only. Unknown extensions → TEXT."""
     ext = os.path.splitext(filename)[1].lower()
-
-    # 1. ZIP-based containers (incl. modern Office formats) - check first,
-    #    since this is more reliable than magic-byte sniffing for OOXML.
-    if ext in {".docx", ".xlsx", ".pptx"} or zipfile.is_zipfile(io.BytesIO(content)):
-        zip_result = _classify_zip(content, ext)
-        if zip_result:
-            return zip_result[1], zip_result[0]
-        # If the extension strongly suggests OOXML but the zip inspection
-        # didn't confirm it, still trust the extension rather than reject.
-        if ext == ".xlsx":
-            return ext, FileCategory.TABLE
-        if ext == ".docx":
-            return ext, FileCategory.DOCUMENT
-        if zipfile.is_zipfile(io.BytesIO(content)):
-            # Plain zip, not a supported container.
-            return ext, None
-
-    # 2. Magic-byte detection for images/PDF/legacy Office binary formats.
-    kind = filetype.guess(content)
-    if kind is not None:
-        mime = kind.mime
-        if mime.startswith("image/"):
-            return ext or f".{kind.extension}", FileCategory.IMAGE
-        if mime == "application/pdf":
-            return ext or ".pdf", FileCategory.PDF
-        if mime in _LEGACY_OFFICE_MIME:
-            category, detected_ext = _LEGACY_OFFICE_MIME[mime]
-            return ext or detected_ext, category
-        # Some other recognised binary format we don't support.
-        return ext, None
-
-    # 3. No magic bytes matched -> likely plain text. Validate via extension
-    #    + UTF-8 decodability rather than trusting the extension blindly.
-    if ext in TEXT_EXTENSIONS:
-        try:
-            content.decode("utf-8")
-        except UnicodeDecodeError:
-            return ext, None
-        category = FileCategory.TABLE if ext in {".csv", ".tsv"} else FileCategory.TEXT
-        return ext, category
-
-    return ext, None
+    if ext in IMAGE_EXTENSIONS:
+        return ext, FileCategory.IMAGE
+    if ext in PDF_EXTENSIONS:
+        return ext, FileCategory.PDF
+    if ext in TABLE_EXTENSIONS:
+        return ext, FileCategory.TABLE
+    if ext in DOCUMENT_EXTENSIONS:
+        return ext, FileCategory.DOCUMENT
+    return ext or ".txt", FileCategory.TEXT
 
 
 class BatchDeleteRequest(BaseModel):

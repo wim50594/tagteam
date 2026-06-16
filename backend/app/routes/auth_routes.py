@@ -1,21 +1,26 @@
 """
-Authentication routes: login, current user info, user management.
+Authentication routes: login, refresh, logout, current user info, user management.
 """
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from auth import (
+    clear_refresh_cookie,
     create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
     get_current_user,
     hash_password,
     require_admin,
+    set_refresh_cookie,
     verify_password,
 )
+from config import get_settings
 from database import get_session
 from models import User
 
@@ -48,18 +53,59 @@ class ChangePasswordRequest(BaseModel):
 async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     session: Annotated[AsyncSession, Depends(get_session)],
+    response: Response,
 ):
     username = form_data.username.lower()
     user = await session.get(User, username)
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    token = create_access_token({"sub": user.username, "role": user.role})
+    access_token = create_access_token({"sub": user.username, "role": user.role})
+    refresh_token = create_refresh_token(user.username)
+    set_refresh_cookie(response, refresh_token)
+
     return {
-        "access_token": token,
+        "access_token": access_token,
         "token_type": "bearer",
         "user": {"username": user.username, "display_name": user.display_name, "role": user.role},
     }
+
+
+@router.post("/refresh", response_model=Token)
+async def refresh(
+    request: Request,
+    response: Response,
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    settings = get_settings()
+    raw_token = request.cookies.get(settings.refresh_cookie_name)
+    if raw_token is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No refresh token")
+
+    username = decode_refresh_token(raw_token)
+    user = await session.get(User, username)
+    if not user:
+        clear_refresh_cookie(response)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
+
+    access_token = create_access_token({"sub": user.username, "role": user.role})
+    # Re-issue the refresh cookie too, so an active user's session keeps
+    # sliding forward instead of hard-expiring after exactly 7 days from
+    # the original login.
+    new_refresh_token = create_refresh_token(user.username)
+    set_refresh_cookie(response, new_refresh_token)
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {"username": user.username, "display_name": user.display_name, "role": user.role},
+    }
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    clear_refresh_cookie(response)
+    return {"status": "ok"}
 
 
 @router.get("/me")

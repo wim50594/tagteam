@@ -2,11 +2,12 @@
 Authentication: password hashing, JWT creation/verification,
 FastAPI dependency for current user, and role guards.
 """
+
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from typing import Annotated, Literal
 
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +21,10 @@ __all__ = [
     "hash_password",
     "verify_password",
     "create_access_token",
+    "create_refresh_token",
+    "decode_refresh_token",
+    "set_refresh_cookie",
+    "clear_refresh_cookie",
     "get_current_user",
     "require_admin",
     "ensure_bootstrap_admin",
@@ -39,17 +44,83 @@ def verify_password(plain: str, hashed: str) -> bool:
         return False
 
 
-# ── JWT ───────────────────────────────────────────────────────
+# ── JWT: access token ──────────────────────────────────────────
 
 def create_access_token(data: dict) -> str:
     settings = get_settings()
     payload = data.copy()
+    payload["type"] = "access"
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.jwt_expire_minutes
     )
     payload["exp"] = expire
     return jwt.encode(
         payload, settings.jwt_secret, algorithm=settings.jwt_algorithm
+    )
+
+
+# ── JWT: refresh token ─────────────────────────────────────────
+
+def create_refresh_token(username: str) -> str:
+    settings = get_settings()
+    expire = datetime.now(timezone.utc) + timedelta(
+        days=settings.refresh_token_expire_days
+    )
+    payload = {"sub": username, "type": "refresh", "exp": expire}
+    return jwt.encode(
+        payload, settings.jwt_secret, algorithm=settings.jwt_algorithm
+    )
+
+
+def decode_refresh_token(token: str) -> str:
+    """Validates a refresh token and returns the username it was issued for.
+
+    Raises HTTPException(401) if the token is missing, expired, malformed,
+    or not actually a refresh token (e.g. someone passing an access token).
+    """
+    settings = get_settings()
+    invalid_exc = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired refresh token",
+    )
+    try:
+        payload = jwt.decode(
+            token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
+        )
+    except JWTError:
+        raise invalid_exc
+
+    if payload.get("type") != "refresh":
+        raise invalid_exc
+    username = payload.get("sub")
+    if not username:
+        raise invalid_exc
+    return username
+
+
+# ── Refresh cookie helpers ──────────────────────────────────────
+
+def set_refresh_cookie(response: Response, token: str) -> None:
+    settings = get_settings()
+    response.set_cookie(
+        key=settings.refresh_cookie_name,
+        value=token,
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite="lax",
+        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
+        path="/api/auth",
+    )
+
+
+def clear_refresh_cookie(response: Response) -> None:
+    settings = get_settings()
+    response.delete_cookie(
+        key=settings.refresh_cookie_name,
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite="lax",
+        path="/api/auth",
     )
 
 
@@ -72,6 +143,10 @@ async def get_current_user(
         payload = jwt.decode(
             token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
         )
+        # Reject refresh tokens presented as access tokens (e.g. if a
+        # client mistakenly sends the refresh token as a Bearer header).
+        if payload.get("type") not in (None, "access"):
+            raise credentials_exc
         username: str | None = payload.get("sub")
         if not username:
             raise credentials_exc

@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # Redis is optional and used only as a cache. If unset, caching is
     # simply skipped and everything falls back to the RDBMS.
-    redis_url: str | None = "redis://redis:6379"
+    redis_url: str | None = None
     cache_ttl_seconds: int = 300
 
     jwt_algorithm: str = "HS256"
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     cookie_secure: bool = True
 
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
-    media_dir: str = "/app/data/media"
+    media_dir: str = "data/media"
 
     # App version, baked into the image at build time from the release's
     # git tag (see Dockerfile ARG/ENV and .github/workflows/release.yml).

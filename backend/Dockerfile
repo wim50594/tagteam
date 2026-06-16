@@ -19,7 +19,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --no-install-project --no-dev
 
 # Now copy the application code and finalise the environment.
-COPY app .
+COPY app ./app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --no-dev
 
@@ -32,4 +32,4 @@ ARG APP_VERSION=dev
 ENV APP_VERSION=${APP_VERSION}
 
 EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,14 +1,14 @@
 .env
 .DS_Store
 data
+
 # Node and build artifacts
-frontend/node_modules
-frontend/dist
+node_modules
+dist
 
 # Python artifacts
-backend/__pycache__
-backend/*.py[cod]
-backend/.venv
+__pycache__
+.venv
 
 # Editor configs
 .vscode

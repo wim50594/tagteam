@@ -20,10 +20,10 @@ from pydantic import BaseModel
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from auth import User, get_current_user
-from config import get_settings
-from database import cache_delete, cache_key_item, get_session
-from models import Item, ItemRef, TableUpload
+from app.auth import User, get_current_user
+from app.config import get_settings
+from app.database import cache_delete, cache_key_item, get_session
+from app.models import Item, ItemRef, TableUpload
 
 router = APIRouter(prefix="/api", tags=["upload"])
 

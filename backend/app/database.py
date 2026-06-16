@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from config import get_settings
+from app.config import get_settings
 
 try:
     import redis.asyncio as aioredis

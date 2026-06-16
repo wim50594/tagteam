@@ -6,10 +6,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
-from auth import (
+from app.auth import (
     clear_refresh_cookie,
     create_access_token,
     create_refresh_token,
@@ -20,9 +20,9 @@ from auth import (
     set_refresh_cookie,
     verify_password,
 )
-from config import get_settings
-from database import get_session
-from models import User
+from app.config import get_settings
+from app.database import get_session
+from app.models import User
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 

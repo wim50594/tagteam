@@ -2,20 +2,23 @@ services:
   backend:
     build:
       context: ./backend
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:////data/tagteam.db}
+      - DATABASE_URL=sqlite+aiosqlite:////data/tagteam.db
+      - COOKIE_SECURE=false
       - JWT_SECRET=${JWT_SECRET:-change_me_to_a_long_random_secret_string}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme123}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173}
       - MEDIA_DIR=${MEDIA_DIR:-/data/media}
-      - COOKIE_SECURE=false
     volumes:
-      - ./backend:/app
+      - ./backend/app:/app/app
+      - /app/.venv
       - ./data:/data
     ports:
       - "8000:8000"
-    command: uv run --project /app uvicorn main:app --app-dir /app/app --host 0.0.0.0 --port 8000 --reload
+    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     build:

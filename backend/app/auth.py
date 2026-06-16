@@ -4,17 +4,17 @@ FastAPI dependency for current user, and role guards.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Literal
+from typing import Annotated
 
 import bcrypt
 from fastapi import Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-from config import get_settings
-from database import get_session
-from models import User
+from app.config import get_settings
+from app.database import get_session
+from app.models import User
 
 __all__ = [
     "User",

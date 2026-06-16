@@ -23,12 +23,12 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
-from auth import User, get_current_user, require_admin
-from config import get_settings
-from database import (
+from app.auth import User, get_current_user, require_admin
+from app.config import get_settings
+from app.database import (
     cache_delete,
     cache_get,
     cache_key_item,
@@ -37,7 +37,7 @@ from database import (
     cache_set,
     get_session,
 )
-from models import FinalLabel, Item, ItemRef, Label, Session as SessionModel, TableUpload
+from app.models import FinalLabel, Item, ItemRef, Label, Session as SessionModel, TableUpload
 
 router = APIRouter(prefix="/api", tags=["sessions"])
 

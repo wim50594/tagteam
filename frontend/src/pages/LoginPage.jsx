@@ -1,15 +1,30 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../lib/auth'
+import { api } from '../lib/api'
 import { APP_NAME } from '../lib/constants'
 
 export default function LoginPage() {
-  const { login } = useAuth()
+  const { login, user } = useAuth()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const [hasUsers, setHasUsers] = useState(true)
+
+  useEffect(() => {
+    if (user) { navigate('/'); return }
+    api.get('/api/auth/check-setup').then(r => {
+      if (!r.has_users) navigate('/register')
+      setHasUsers(r.has_users)
+    }).catch(() => {
+      setError('')
+    })
+  }, [user])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -19,7 +34,7 @@ export default function LoginPage() {
       await login(username.trim(), password)
       navigate('/')
     } catch (err) {
-      setError(err.message || 'Login failed')
+      setError(err.message || t('auth.loginButton'))
     } finally {
       setLoading(false)
     }
@@ -28,17 +43,16 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-indigo-50 px-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="text-center mb-8">
           <span className="text-5xl">🏷️</span>
           <h1 className="text-2xl font-black text-indigo-600 mt-2">{APP_NAME}</h1>
-          <p className="text-sm text-slate-500 mt-1">Sign in to your account</p>
+          <p className="text-sm text-slate-500 mt-1">{t('auth.login')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="card space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">
-              Username
+              {t('auth.username')}
             </label>
             <input
               type="text"
@@ -47,12 +61,11 @@ export default function LoginPage() {
               autoFocus
               autoComplete="username"
               className="input-base"
-              placeholder="your-username"
             />
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">
-              Password
+              {t('auth.password')}
             </label>
             <input
               type="password"
@@ -60,7 +73,6 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               className="input-base"
-              placeholder="••••••••"
             />
           </div>
 
@@ -75,13 +87,15 @@ export default function LoginPage() {
             disabled={loading || !username || !password}
             className="btn-primary w-full justify-center py-2.5"
           >
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? '…' : t('auth.loginButton')}
           </button>
         </form>
 
-        <p className="text-center text-xs text-slate-400 mt-4">
-          Accounts are managed by an administrator.
-        </p>
+        {hasUsers && (
+          <p className="text-center text-xs text-slate-400 mt-4">
+            {t('auth.needsInvite')}
+          </p>
+        )}
       </div>
     </div>
   )

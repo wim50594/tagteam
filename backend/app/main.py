@@ -12,7 +12,7 @@ from app.auth import ensure_bootstrap_admin
 from app.config import get_settings
 from app.database import async_session_factory, connect_cache, disconnect_cache, init_db
 from app.routes.auth_routes import router as auth_router
-from app.routes.session_routes import router as session_router
+from app.routes.project_routes import router as project_router
 from app.routes.upload_routes import router as upload_router
 
 
@@ -47,7 +47,7 @@ app.add_middleware(
 # ── Routers ───────────────────────────────────────────────────
 app.include_router(auth_router)
 app.include_router(upload_router)
-app.include_router(session_router)
+app.include_router(project_router)
 
 
 # ── Utility endpoints ─────────────────────────────────────────

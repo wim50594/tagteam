@@ -14,6 +14,11 @@ jobs:
       - run: uv sync
       - run: uv run ruff check .
       - run: uv run python -m compileall .
+      - run: uv run python -m pytest tests/ -v -p no:asyncio
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///:memory:
+          JWT_SECRET: ci-test-secret-do-not-use-in-prod
+          REDIS_URL: ""
 
   frontend:
     runs-on: ubuntu-latest

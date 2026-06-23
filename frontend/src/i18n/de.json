@@ -1,0 +1,188 @@
+{
+  "app": {
+    "name": "TagTeam",
+    "version": "v{{version}}"
+  },
+  "nav": {
+    "projects": "Projekte",
+    "users": "Benutzer",
+    "signOut": "Abmelden",
+    "profile": "Profil"
+  },
+  "home": {
+    "title": "Projekte",
+    "subtitle": "Wähle ein Projekt zum Annotieren aus.",
+    "newProject": "Neues Projekt",
+    "noProjects": "Noch keine Projekte.",
+    "createFirst": "Erstes Projekt erstellen →",
+    "delete": "Löschen",
+    "edit": "Projekt bearbeiten",
+    "deleteConfirm": "Dieses Projekt und alle Daten endgültig löschen?",
+    "users": "Benutzer",
+    "items": "Einträge",
+    "taxonomy": "Taxonomie",
+    "labels": "Label",
+    "openWorkspace": "Arbeitsbereich öffnen →",
+    "reviewExport": "Review & Export",
+    "verification": "Verifikation",
+    "role": {
+      "owner": "Besitzer",
+      "maintainer": "Betreuer",
+      "annotator": "Annotator",
+      "admin": "Admin",
+      "user": "Benutzer"
+    }
+  },
+  "config": {
+    "title": "Projekt konfigurieren",
+    "editing": "Projekt bearbeiten",
+    "backToProjects": "← Zurück zu Projekten",
+    "steps": {
+      "data": "Daten",
+      "taxonomy": "Taxonomie",
+      "team": "Team & Start"
+    },
+    "step1": {
+      "title": "Schritt 1: Daten hochladen",
+      "desc": "Unterstützt: Bilder, PDFs, Word-Dokumente, Text, Tabellen",
+      "dropFiles": "Dateien oder Ordner hier ablegen",
+      "uploading": "Lade hoch…",
+      "existingItems": "vorhandene(r) Eintrag/Entry — klicke ✕ zum Entfernen",
+      "existingNotice": "Dieses Projekt hat bereits {{count}} Einträge. Lade weitere Dateien hoch, um Einträge hinzuzufügen.",
+      "removeAll": "Alle entfernen",
+      "columnsDetected": "Tabellenspalten erkannt – wähle welche beim Annotieren angezeigt werden:",
+      "taxonomyNext": "Taxonomie →"
+    },
+    "step2": {
+      "title": "Schritt 2: Taxonomie hochladen",
+      "desc": "CSV/TSV oder TXT (eine Klasse pro Zeile, > für Hierarchie)",
+      "dropFile": "Taxonomie-Datei ablegen (CSV, TSV, TXT)",
+      "manualTitle": "✍️ Oder Labels manuell eingeben",
+      "manualDesc": "Ein Label pro Zeile. Verwende > für Hierarchie, z.B. Tiere > Säugetiere > Hunde",
+      "labelsLoaded": "{{count}} Labels aus \"{{file}}\" geladen",
+      "labelsParsed": "{{count}} Labels aus Text geparst",
+      "tableHeaders": ["Name", "Voller Pfad", "Ebene"],
+      "back": "← Zurück",
+      "teamNext": "Team & Start →"
+    },
+    "step3": {
+      "title": "Schritt 3: Team konfigurieren & starten",
+      "projectName": "Projektname",
+      "projectNamePlaceholder": "z.B. Literatur-Screening Q1 2025",
+      "team": "Team",
+      "teamDesc": "Füge Benutzer hinzu und weise ihnen Projektrollen zu.",
+      "owner": "Projektbesitzer",
+      "transferTo": "Übertragen an…",
+      "role": {
+        "annotator": "Annotator",
+        "maintainer": "Betreuer",
+        "owner": "Besitzer"
+      },
+      "addUser": "Benutzer suchen…",
+      "batchMode": "Stapelmodus:",
+      "split": "Aufgeteilt (Round-Robin)",
+      "splitDesc": "Jeder Eintrag wird von genau einer Person annotiert. Schnell, keine Kreuzvalidierung.",
+      "verification": "Verifikation (k Personen pro Eintrag)",
+      "verificationDesc": "Jeder Eintrag wird von mehreren Personen geprüft; Arbeit wird gleichmäßig verteilt. Konflikte sind im Review sichtbar.",
+      "reviewersPerItem": "Prüfer pro Eintrag:",
+      "of": "von",
+      "available": "verfügbar",
+      "workloadEstimate": "Arbeitslast-Schätzung:",
+      "back": "← Zurück",
+      "launch": "🚀 Projekt starten",
+      "save": "💾 Änderungen speichern",
+      "creating": "Erstelle…",
+      "saving": "Speichere…"
+    },
+    "errors": {
+      "nameRequired": "Projektname ist erforderlich",
+      "userRequired": "Mindestens ein Benutzer ist erforderlich"
+    }
+  },
+  "workspace": {
+    "loading": "Lade Arbeitsbereich…",
+    "user": "Benutzer:",
+    "progress": "Fortschritt",
+    "classify": "Klassifizieren",
+    "saveNext": "Speichern & Weiter →",
+    "next": "Weiter →",
+    "back": "← Zurück",
+    "skip": "Überspringen",
+    "batchComplete": "Stapel abgeschlossen!",
+    "noTagHint": "Kein Label ausgewählt – wähle mindestens eines oder überspringe."
+  },
+  "tagsearch": {
+    "placeholder": "Klicken für Vorschläge oder tippen zum Suchen…",
+    "noTaxonomy": "Keine Taxonomie geladen",
+    "topLevel": "Hauptkategorien"
+  },
+  "review": {
+    "title": "Review & Export",
+    "rawPerUser": "Rohdaten (pro Benutzer)",
+    "merged": "Zusammengeführt (konsolidiert)",
+    "openConflicts": "offener Konflikt",
+    "openConflicts_plural": "offene Konflikte",
+    "progressPerUser": "Fortschritt pro Benutzer",
+    "exportCsv": "CSV exportieren 📥",
+    "backToWorkspace": "← Zurück zum Arbeitsbereich",
+    "conflicts": "Konflikte",
+    "noConflicts": "Keine Konflikte gefunden",
+    "resolved": "gelöst",
+    "resolve": "Lösen",
+    "resolveTitle": "Konflikt lösen",
+    "selectFinalTags": "Finale Labels auswählen:",
+    "selectAll": "Alle auswählen",
+    "clear": "Leeren",
+    "cancel": "Abbrechen",
+    "saveResolution": "Lösung speichern"
+  },
+  "profile": {
+    "title": "Profil",
+    "subtitle": "Aktualisiere deine Kontoinformationen.",
+    "displayName": "Anzeigename",
+    "username": "Benutzername",
+    "newPassword": "Neues Passwort",
+    "passwordHint": "Min. 6 Zeichen. Leer lassen, um aktuelles beizubehalten.",
+    "usernameHint": "Kleinbuchstaben, Zahlen, _ und -.",
+    "saveChanges": "Änderungen speichern",
+    "saving": "Speichere…",
+    "noChanges": "Keine Änderungen zum Speichern.",
+    "updated": "Profil erfolgreich aktualisiert.",
+    "language": "Sprache"
+  },
+  "usersPage": {
+    "title": "Benutzer",
+    "inviteTitle": "Benutzer zu Projekt einladen",
+    "selectProject": "Projekt auswählen",
+    "role": "Rolle",
+    "generateInvite": "Einladungslink erstellen",
+    "generating": "Erstelle…",
+    "inviteSuccess": "Einladungslink (kopieren und an den Benutzer senden):",
+    "copy": "Kopieren",
+    "copied": "Kopiert!",
+    "expires": "Läuft ab",
+    "createTitle": "Neuen Benutzer erstellen",
+    "createUser": "Benutzer erstellen",
+    "creating": "Erstelle…"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "register": "Registrieren",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "loginButton": "Anmelden",
+    "registerButton": "Konto erstellen",
+    "noAccount": "Noch kein Konto?",
+    "hasAccount": "Bereits ein Konto?",
+    "registerHere": "Hier registrieren",
+    "loginHere": "Hier anmelden",
+    "displayName": "Anzeigename",
+    "inviteToken": "Einladungstoken",
+    "needsInvite": "Bitte deinen Admin um einen Einladungslink."
+  },
+  "common": {
+    "loading": "Lade…",
+    "remove": "Entfernen",
+    "unknown": "Unbekannt"
+  }
+}

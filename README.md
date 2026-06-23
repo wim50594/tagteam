@@ -12,8 +12,8 @@ cp env.example .env
 **Important**: Generate a strong JWT_SECRET BEFORE starting containers:
 ```bash
 # Generate random secret
-sed -i '' "s/^#[[:space:]]*JWT_SECRET=.*/JWT_SECRET=$(openssl rand -hex 32)/" .env
-sed -i '' "s/^#[[:space:]]*ADMIN_PASSWORD=.*/ADMIN_PASSWORD=changeme123/" .env
+sed -i '' "s/^JWT_SECRET=.*/JWT_SECRET=$(openssl rand -hex 32)/" .env
+sed -i '' 's/^ADMIN_PASSWORD=.*/ADMIN_PASSWORD=changeme123/' .env
 ```
 
 ### Start production locally

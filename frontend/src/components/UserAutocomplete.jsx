@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
  * Tag-style multi-select with autocomplete from a list of users.
  * Keyboard: ArrowDown/Up to navigate, Tab/Enter to complete, Backspace to remove last.
  */
-export default function UserAutocomplete({ allUsers, selected, onChange, placeholder = 'Add annotator…' }) {
+export default function UserAutocomplete({ allUsers, selected, onChange, placeholder = 'Add user…', hideChips = false }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [highlighted, setHighlighted] = useState(0)
@@ -50,12 +50,17 @@ export default function UserAutocomplete({ allUsers, selected, onChange, placeho
     else if (e.key === 'Escape') setOpen(false)
   }
 
-  const ROLE_COLOR = { admin: 'text-violet-600', annotator: 'text-teal-600' }
+  const ROLE_BADGE = hideChips
+    ? { admin: 'bg-violet-100 text-violet-700 border-violet-200', user: 'bg-emerald-100 text-emerald-700 border-emerald-200' }
+    : { admin: 'bg-violet-100 text-violet-800 border-violet-200', user: 'bg-teal-100 text-teal-800 border-teal-200' }
+  const ROLE_LABEL = hideChips
+    ? { admin: 'Admin', user: 'Annotator' }
+    : { admin: 'Admin', user: 'User' }
 
   return (
     <div className="space-y-2">
       {/* Selected chips */}
-      {selected.length > 0 && (
+      {!hideChips && selected.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {selected.map((u) => (
             <span key={u.username} className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 rounded-full px-2.5 py-1 text-xs font-semibold">
@@ -91,7 +96,7 @@ export default function UserAutocomplete({ allUsers, selected, onChange, placeho
                   <span className="font-semibold text-slate-800">{u.display_name}</span>
                   <span className="text-slate-400 ml-1.5 text-xs">@{u.username}</span>
                 </div>
-                <span className={`text-xs font-bold ${ROLE_COLOR[u.role] ?? ''}`}>{u.role}</span>
+                <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full border ${ROLE_BADGE[u.role] ?? ''}`}>{ROLE_LABEL[u.role] ?? u.role}</span>
               </li>
             ))}
           </ul>

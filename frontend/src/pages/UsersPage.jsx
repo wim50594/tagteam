@@ -5,16 +5,34 @@ import { useAuth } from '../lib/auth'
 export default function UsersPage() {
   const { user: me } = useAuth()
   const [users, setUsers] = useState([])
-  const [form, setForm] = useState({ username: '', display_name: '', password: '', role: 'annotator' })
+  const [form, setForm] = useState({ username: '', display_name: '', password: '', role: 'user' })
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
 
-  useEffect(() => { loadUsers() }, [])
+  // Invitation state
+  const [projects, setProjects] = useState([])
+  const [inviteProjectId, setInviteProjectId] = useState('')
+  const [inviteRole, setInviteRole] = useState('annotator')  // project-level role
+  const [inviteToken, setInviteToken] = useState(null)
+  const [inviting, setInviting] = useState(false)
+
+  useEffect(() => {
+    loadUsers()
+    loadProjects()
+  }, [])
 
   const loadUsers = async () => {
     const data = await api.get('/api/auth/users')
     setUsers(data)
+  }
+
+  const loadProjects = async () => {
+    try {
+      const data = await api.get('/api/sessions')
+      setProjects(data)
+      if (data.length > 0 && !inviteProjectId) setInviteProjectId(data[0].id)
+    } catch { /* non-critical */ }
   }
 
   const showToast = (msg, type = 'success') => {
@@ -39,9 +57,9 @@ export default function UsersPage() {
     setSaving(true)
     try {
       await api.post('/api/auth/users', { body: { ...form, username: form.username.toLowerCase() } })
-      setForm({ username: '', display_name: '', password: '', role: 'annotator' })
+      setForm({ username: '', display_name: '', password: '', role: 'user' })
       await loadUsers()
-      showToast(`User "${form.username}" created successfully.`)
+      showToast(`User "${form.username}" created.`)
     } catch (err) {
       showToast(err.message, 'error')
     } finally {
@@ -60,9 +78,26 @@ export default function UsersPage() {
     }
   }
 
+  const handleInvite = async () => {
+    if (!inviteProjectId) { showToast('Select a project first.', 'error'); return }
+    setInviting(true)
+    try {
+      const res = await api.post('/api/auth/invitations', {
+        body: { project_id: parseInt(inviteProjectId), role: inviteRole },
+      })
+      const link = `${window.location.origin}/register?token=${res.token}`
+      setInviteToken({ link, ...res })
+      showToast('Invitation link generated.')
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setInviting(false)
+    }
+  }
+
   const ROLE_BADGE = {
-    admin:     'bg-violet-100 text-violet-800 border-violet-200',
-    annotator: 'bg-teal-100 text-teal-800 border-teal-200',
+    admin: 'bg-violet-100 text-violet-800 border-violet-200',
+    user:  'bg-teal-100 text-teal-800 border-teal-200',
   }
 
   return (
@@ -77,7 +112,68 @@ export default function UsersPage() {
 
       <div>
         <h1 className="text-2xl font-black text-slate-900">User Management</h1>
-        <p className="text-sm text-slate-500 mt-1">Create and manage accounts. Only admins can access this page.</p>
+        <p className="text-sm text-slate-500 mt-1">Create accounts and generate invitation links.</p>
+      </div>
+
+      {/* ── Invite section ── */}
+      <div className="card space-y-4">
+        <h2 className="font-bold text-slate-800 text-base">🔗 Invite user to project</h2>
+        <p className="text-xs text-slate-500">Generates a link the new user can visit to set their credentials and join a project.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-600 mb-1">Project</label>
+            <select
+              value={inviteProjectId}
+              onChange={(e) => setInviteProjectId(e.target.value)}
+              className="input-base"
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-600 mb-1">Role</label>
+            <select
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value)}
+              className="input-base"
+            >
+              <option value="annotator">Annotator</option>
+              <option value="maintainer">Maintainer</option>
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button onClick={handleInvite} disabled={inviting} className="btn-primary w-full">
+              {inviting ? 'Generating…' : 'Generate invite link'}
+            </button>
+          </div>
+        </div>
+
+        {inviteToken && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-2">
+            <p className="text-xs font-bold text-emerald-800">✅ Invitation link (copy and send to the user):</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                readOnly
+                value={inviteToken.link}
+                className="flex-1 bg-white border border-emerald-300 rounded-lg px-3 py-2 text-xs font-mono text-emerald-800"
+                onFocus={(e) => e.target.select()}
+              />
+              <button
+                onClick={() => { navigator.clipboard.writeText(inviteToken.link); showToast('Copied!') }}
+                className="btn-secondary !text-xs !px-3"
+              >
+                Copy
+              </button>
+            </div>
+            <p className="text-xs text-emerald-600">
+              Role: <strong>{inviteToken.role}</strong>
+              {inviteToken.expires_at && <> · Expires: {new Date(inviteToken.expires_at).toLocaleString()}</>}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Create form */}
@@ -124,7 +220,7 @@ export default function UsersPage() {
               onChange={(e) => setForm({ ...form, role: e.target.value })}
               className="input-base"
             >
-              <option value="annotator">Annotator</option>
+              <option value="user">User</option>
               <option value="admin">Admin</option>
             </select>
           </div>

@@ -4,13 +4,16 @@ Central settings – all values sourced from environment variables.
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    admin_password: str
-    jwt_secret: str
+    jwt_secret: str = ""
+
+    admin_bootstrap: bool = False
     admin_username: str = "admin"
+    admin_password: str = ""
 
     # Primary relational database (PostgreSQL, SQLite, ...)
     database_url: str = "sqlite+aiosqlite:///./data/tagteam.db"
@@ -44,6 +47,20 @@ class Settings(BaseSettings):
     # "dev" is the default for local/dev runs where no tag applies.
     app_version: str = "dev"
 
+    @model_validator(mode="after")
+    def _validate(self) -> "Settings":
+        if self.admin_bootstrap:
+            if not self.admin_username or not self.admin_password:
+                raise ValueError(
+                    "ADMIN_BOOTSTRAP is True but ADMIN_USERNAME and/or "
+                    "ADMIN_PASSWORD are not set."
+                )
+        if not self.jwt_secret:
+            raise ValueError(
+                "JWT_SECRET is required. Generate one with: "
+                "python -c \"import secrets; print(secrets.token_urlsafe(32))\"")
+        return self
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
@@ -54,11 +71,9 @@ class Settings(BaseSettings):
         p.mkdir(parents=True, exist_ok=True)
         return p
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings.model_validate({})
+    return Settings()

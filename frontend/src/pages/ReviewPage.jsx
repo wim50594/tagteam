@@ -3,11 +3,13 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import ItemDisplay from "../components/ItemDisplay";
 import { api } from "../lib/api";
+import { useAuth } from "../lib/auth";
 import { APP_NAME } from '../lib/constants';
 
 export default function ReviewPage() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [session, setSession] = useState(null);
   const [progress, setProgress] = useState({});
   const [conflicts, setConflicts] = useState([]);
@@ -25,6 +27,12 @@ export default function ReviewPage() {
       api.get(`/api/sessions/${sessionId}`),
       api.get(`/api/sessions/${sessionId}/progress`),
     ]);
+    // Restrict access: admins always have access, otherwise owners & maintainers
+    const role = s.current_user_role;
+    if (!isAdmin && !['owner', 'maintainer'].includes(role)) {
+      navigate('/');
+      return;
+    }
     setSession(s);
     if (!s.verification_mode) setExportMode("raw");
     setProgress(p);
@@ -99,7 +107,7 @@ export default function ReviewPage() {
               onChange={(e) => setExportMode(e.target.value)}
               className="input-base !w-auto"
             >
-              <option value="raw">Raw (per annotator)</option>
+              <option value="raw">Raw (per user)</option>
               <option value="merged" disabled={!canMerge}>
                 Merged (consolidated)
               </option>
@@ -119,7 +127,7 @@ export default function ReviewPage() {
           </div>
         </div>
 
-        {/* Progress per annotator */}
+        {/* Progress per user */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Object.entries(progress).map(([ann, stat]) => (
             <div
@@ -127,7 +135,7 @@ export default function ReviewPage() {
               className="bg-slate-50 border border-slate-200 rounded-xl p-4"
             >
               <div className="flex justify-between items-center mb-2">
-                <span className="font-bold text-slate-800 text-sm">{ann}</span>
+                <span className="font-bold text-slate-800 text-sm">{stat.display_name || ann}</span>
                 <span className="text-xs font-bold text-indigo-600">
                   {stat.pct}%
                 </span>
@@ -196,7 +204,7 @@ export default function ReviewPage() {
                         <td className="p-3 space-y-0.5">
                           {c.details.map((d) => (
                             <div key={d.annotator}>
-                              <b>{d.annotator}:</b>{" "}
+                              <b>{d.display_name || d.annotator}:</b>{" "}
                               {d.labels.length ? (
                                 d.labels.slice(0, 2).join(", ") +
                                 (d.labels.length > 2 ? "…" : "")
@@ -275,7 +283,7 @@ export default function ReviewPage() {
                 {modalItem.details.map((d) => (
                   <div key={d.annotator} className="text-xs">
                     <span className="font-bold text-slate-700">
-                      {d.annotator}:
+                      {d.display_name || d.annotator}:
                     </span>{" "}
                     {d.labels.join(", ") || (
                       <em className="text-slate-400">no labels</em>

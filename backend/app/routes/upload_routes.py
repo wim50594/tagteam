@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 import os
-import uuid
 from dataclasses import dataclass
 from enum import Enum
 from typing import Annotated, Any, Awaitable, Callable
@@ -23,7 +23,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.auth import User, get_current_user
 from app.config import get_settings
 from app.database import cache_delete, cache_key_item, get_session
-from app.models import Item, ItemRef, TableUpload
+from app.models import Item, ProjectItemRef, TableUpload
 
 router = APIRouter(prefix="/api", tags=["upload"])
 
@@ -103,16 +103,10 @@ class UploadedFile:
         }
 
 
-# ── Hash-based deduplication ──────────────────────────────────
+# ── Hash helpers ──────────────────────────────────────────────
 
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
-
-
-async def _existing_item_for_hash(db: AsyncSession, content_hash: str) -> str | None:
-    result = await db.exec(select(Item).where(Item.content_hash == content_hash))
-    item = result.first()
-    return item.id if item else None
 
 
 # ── Per-category handlers ─────────────────────────────────────
@@ -132,14 +126,14 @@ async def _handle_binary(
     item_type: str,       # value persisted in item.type
     media_dir,
 ) -> list[UploadedFile]:
-    content_hash = _sha256(content)
+    item_id = _sha256(content)
     size = len(content)
 
-    existing = await _existing_item_for_hash(db, content_hash)
+    # Check for duplicate by content hash (the item ID)
+    existing = await db.get(Item, item_id)
     if existing:
-        return [UploadedFile(existing, base_name, category, size, duplicate=True)]
+        return [UploadedFile(item_id, base_name, category, size, duplicate=True)]
 
-    item_id = str(uuid.uuid4())
     stored_name = f"{item_id}{ext}"
     async with aiofiles.open(media_dir / stored_name, "wb") as out:
         await out.write(content)
@@ -150,7 +144,7 @@ async def _handle_binary(
         type=item_type,
         ext=ext,
         filename=stored_name,
-        content_hash=content_hash,
+        content_hash=item_id,
         size=size,
     )
     db.add(item)
@@ -160,21 +154,20 @@ async def _handle_binary(
 async def _handle_text(
     *, db: AsyncSession, content: bytes, base_name: str, **_
 ) -> list[UploadedFile]:
-    content_hash = _sha256(content)
+    item_id = _sha256(content)
     size = len(content)
 
-    existing = await _existing_item_for_hash(db, content_hash)
+    existing = await db.get(Item, item_id)
     if existing:
-        return [UploadedFile(existing, base_name, FileCategory.TEXT, size, duplicate=True)]
+        return [UploadedFile(item_id, base_name, FileCategory.TEXT, size, duplicate=True)]
 
-    item_id = str(uuid.uuid4())
     text = content.decode("utf-8", errors="ignore")
     item = Item(
         id=item_id,
         name=base_name,
         type="text",
         content=text,
-        content_hash=content_hash,
+        content_hash=item_id,
         size=size,
     )
     db.add(item)
@@ -197,15 +190,20 @@ async def _handle_table(
     # Reuse previous rows if this exact file was uploaded before.
     cached = await db.get(TableUpload, content_hash)
     if cached:
-        for col in cached.columns:
-            columns_set.add(col)
-        return [
-            UploadedFile(
-                row_id, base_name, FileCategory.TABLE, size,
-                duplicate=True, row_count=len(cached.row_ids),
-            )
-            for row_id in cached.row_ids
-        ]
+        # Verify the cached rows still exist (they may have been consumed by a project)
+        sample = await db.get(Item, cached.row_ids[0]) if cached.row_ids else None
+        if sample:
+            for col in cached.columns:
+                columns_set.add(col)
+            return [
+                UploadedFile(
+                    row_id, base_name, FileCategory.TABLE, size,
+                    duplicate=True, row_count=len(cached.row_ids),
+                )
+                for row_id in cached.row_ids
+            ]
+        # Stale cache — rows were consumed, reprocess
+        await db.delete(cached)
 
     try:
         if ext in {".xlsx", ".xls"}:
@@ -223,12 +221,17 @@ async def _handle_table(
     row_ids: list[str] = []
     local_cols: set[str] = set()
     for idx, row in df.iterrows():
-        row_id = str(uuid.uuid4())
         row_dict = {
             str(k): (str(v) if v is not None else "")
             for k, v in row.to_dict().items()
         }
+        row_id = _sha256(json.dumps(row_dict, sort_keys=True, ensure_ascii=False).encode("utf-8"))
         local_cols.update(row_dict.keys())
+        # Skip if this exact row already exists (globally deduplicated)
+        existing = await db.get(Item, row_id)
+        if existing:
+            row_ids.append(row_id)
+            continue
         db.add(Item(
             id=row_id,
             name=f"Row#{idx} from {base_name}",
@@ -352,7 +355,7 @@ async def batch_delete_draft_items(
         if not item:
             continue
 
-        result = await db.exec(select(ItemRef).where(ItemRef.item_id == item_id))
+        result = await db.exec(select(ProjectItemRef).where(ProjectItemRef.item_id == item_id))
         if result.first():
             # Reused by another launched project -> skip deletion, count as detached
             detached_count += 1
@@ -402,7 +405,7 @@ async def delete_draft_item(
     if not item:
         return {"status": "not_found"}
 
-    result = await db.exec(select(ItemRef).where(ItemRef.item_id == item_id))
+    result = await db.exec(select(ProjectItemRef).where(ProjectItemRef.item_id == item_id))
     ref_count = len(result.all())
 
     # If other projects use it, do NOT delete it.
@@ -462,21 +465,45 @@ async def parse_labels(
         return {"taxonomy": taxonomy}
 
     try:
+        # Determine separator
         if fname.endswith(".tsv"):
             sep = "\t"
         elif delimiter and delimiter.strip():
             sep = delimiter.strip()
         else:
-            sample = content[:2048].decode("utf-8", errors="ignore")
-            sep = next((s for s in [",", "\t", ";", "|"] if s in sample), None)
+            text = content.decode("utf-8", errors="ignore")
+            sep = next((s for s in [",", "\t", ";", "|"] if s in text), None)
 
-        df = pd.read_csv(
-            io.BytesIO(content),
-            sep=sep,
-            header=0 if has_header else None,
-            engine="python",
-            dtype=str,
-        )
+        # Read raw text to find max fields and handle Excel separately
+        if fname.endswith((".xlsx", ".xls")):
+            df = pd.read_excel(
+                io.BytesIO(content),
+                header=0 if has_header else None,
+                dtype=str,
+            )
+        else:
+            text = content.decode("utf-8", errors="ignore")
+            lines = [line for line in text.splitlines() if line.strip()]
+            if not lines:
+                return {"taxonomy": []}
+
+            # Find maximum number of fields across all lines
+            max_fields = 0
+            for line in lines:
+                fields = line.split(sep) if sep else [line]
+                max_fields = max(max_fields, len(fields))
+
+            skip = 1 if has_header and len(lines) > 0 else 0
+            df = pd.read_csv(
+                io.BytesIO(content),
+                sep=sep,
+                header=None,
+                names=range(max_fields),
+                skiprows=skip,
+                engine="python",
+                dtype=str,
+            )
+
         df = df.where(pd.notnull(df), None)
         taxonomy = []
         for _, row in df.iterrows():

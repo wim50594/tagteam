@@ -101,6 +101,10 @@ def cache_key_session(session_id: str) -> str:
     return f"cache:session:{session_id}"
 
 
+def cache_key_project(project_id: int) -> str:
+    return f"cache:project:{project_id}"
+
+
 def cache_key_item(item_id: str) -> str:
     return f"cache:item:{item_id}"
 

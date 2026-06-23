@@ -189,7 +189,7 @@ async def ensure_bootstrap_admin(session: AsyncSession) -> None:
 
 async def promote_first_user(session: AsyncSession) -> None:
     """If no admin exists, promote the first registered user to admin."""
-    result = await session.exec(select(User).where(User.is_admin == True))
+    result = await session.exec(select(User).where(User.is_admin.is_(True)))
     if result.first():
         return  # admin already exists
 

@@ -257,9 +257,9 @@ async def _handle_table(
 
 @router.post("/upload/items")
 async def upload_universal(
+    _user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_session)],
     files: list[UploadFile] = File(...),
-    _user: Annotated[User, Depends(get_current_user)] = None,
 ):
     settings = get_settings()
     media_dir = settings.media_path
@@ -436,10 +436,10 @@ async def delete_draft_item(
 
 @router.post("/upload/labels")
 async def parse_labels(
+    _user: Annotated[User, Depends(get_current_user)],
     file: UploadFile = File(...),
     has_header: bool = Form(True),
     delimiter: str = Form(""),
-    _user: Annotated[User, Depends(get_current_user)] = None,
 ):
     content = await file.read()
     fname = (file.filename or "").lower()

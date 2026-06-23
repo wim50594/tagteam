@@ -3,13 +3,11 @@ Conflict resolution service – immutable annotation management.
 """
 from __future__ import annotations
 
-from typing import Sequence
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models import Annotation, FinalDecision, Project, ProjectMember, User
-from app.services.taxonomy import TaxonomyService
+from app.models import Annotation, FinalDecision, Project, User
 
 
 class ConflictService:

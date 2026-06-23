@@ -46,24 +46,25 @@ export default function Layout() {
             </span>
           </Link>
 
-          {/* Nav links */}
+          {/* Nav links — centred */}
           <nav className="flex items-center gap-1">
             {navLink('/', t('nav.projects'))}
             {isAdmin && navLink('/users', t('nav.users'))}
           </nav>
 
-          {/* Language switcher */}
-          <select
-            value={user?.language || 'en'}
-            onChange={(e) => setLanguage(e.target.value)}
-            className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-600 font-medium hover:border-indigo-300 focus:outline-none focus:border-indigo-400 transition"
-          >
-            <option value="en">🇬🇧 EN</option>
-            <option value="de">🇩🇪 DE</option>
-          </select>
-
-          {/* User badge + logout */}
+          {/* Language + user badge + logout */}
           <div className="flex items-center gap-3">
+            {/* Language switcher */}
+            <select
+              value={user?.language || 'en'}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-600 font-medium hover:border-indigo-300 focus:outline-none focus:border-indigo-400 transition"
+            >
+              <option value="en">🇬🇧 EN</option>
+              <option value="de">🇩🇪 DE</option>
+            </select>
+
+            {/* User info */}
             <div className="flex items-center gap-2">
               <Link to="/profile" className="text-right hidden sm:block hover:opacity-80 transition">
                 <p className="text-sm font-bold text-slate-800 leading-none">

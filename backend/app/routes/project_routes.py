@@ -22,7 +22,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import asc, desc, select
 
 from app._sqlmodel_compat import col_in
-from app.auth import User, get_current_user, hash_password, require_admin
+from app.auth import User, get_current_user, require_admin
 from app.config import get_settings
 from app.database import (
     cache_delete,
@@ -1180,6 +1180,8 @@ async def export_project_full(
                     "username": u.username,
                     "display_name": u.display_name,
                     "language": u.language,
+                    "hashed_password": u.hashed_password,
+                    "is_admin": u.is_admin,
                     "role": user_roles.get(u.id, "annotator"),
                 })
         zf.writestr("users.json", json.dumps(users_data, indent=2))
@@ -1285,7 +1287,7 @@ async def import_project_full(
     except (KeyError, json.JSONDecodeError) as e:
         raise HTTPException(status_code=400, detail=f"Invalid archive: missing or corrupt file: {e}")
 
-    # ── Create users (if they don't exist) ──
+    # ── Create or resolve users ──
     username_map: dict[str, int] = {}  # username -> user_id
     for u_data in users_data:
         username = u_data["username"].lower()
@@ -1294,12 +1296,12 @@ async def import_project_full(
         if existing:
             username_map[username] = existing.id
         else:
-            import secrets
             new_user = UserModel(
                 username=username,
                 display_name=u_data.get("display_name", username),
                 language=u_data.get("language", "en"),
-                hashed_password=hash_password(secrets.token_urlsafe(32)),
+                is_admin=u_data.get("is_admin", False),
+                hashed_password=u_data["hashed_password"],
             )
             db.add(new_user)
             await db.flush()

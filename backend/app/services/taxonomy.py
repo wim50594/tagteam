@@ -3,7 +3,6 @@ Taxonomy service – hierarchical label management and cascading operations.
 """
 from __future__ import annotations
 
-from typing import Sequence
 
 from sqlmodel import select, delete
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -37,8 +36,6 @@ class TaxonomyService:
         stored annotation.  The UI can still display the collapsed form.
         """
         expanded = set()
-        node_map: dict[str, TaxonomyNode] = {n.full_path: n for n in all_nodes}
-
         for label in labels:
             parts = label.split(" > ")
             # Add all prefix paths
@@ -146,9 +143,7 @@ class TaxonomyService:
 
         # Get the entire taxonomy for this project
         all_nodes = await TaxonomyService.get_taxonomy_nodes(db, node.project_id)
-        node_map = {n.full_path: n for n in all_nodes}
 
-        # Find all descendant paths (nodes whose full_path starts with this node's full_path)
         affected_paths: set[str] = set()
         for n in all_nodes:
             if n.full_path == node.full_path or n.full_path.startswith(node.full_path + " > "):
@@ -173,7 +168,7 @@ class TaxonomyService:
         count = 0
         for ann in annotations:
             old_labels = set(ann.labels)
-            new_labels = [l for l in ann.labels if l not in affected_paths]
+            new_labels = [label for label in ann.labels if label not in affected_paths]
             if len(new_labels) != len(old_labels):
                 ann.labels = new_labels
                 db.add(ann)

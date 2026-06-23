@@ -12,7 +12,7 @@ All primary keys are autoincrement integers.  Username is indexed and unique.
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import Column, JSON, Integer, String, Boolean, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, JSON, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 

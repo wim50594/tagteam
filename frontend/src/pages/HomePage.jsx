@@ -12,6 +12,10 @@ export default function HomePage() {
   const navigate = useNavigate()
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
+  const [importOpen, setImportOpen] = useState(false)
+  const [importFile, setImportFile] = useState(null)
+  const [importName, setImportName] = useState('')
+  const [importing, setImporting] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -27,11 +31,46 @@ export default function HomePage() {
     return new Date(iso).toLocaleDateString(locale)
   }
 
+  const exportProject = async (e, sid) => {
+    e.stopPropagation()
+    try {
+      const res = await api.get(`/api/projects/${sid}/export-full`)
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `tagteam_project_${sid}.zip`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      alert('Export failed: ' + err.message)
+    }
+  }
+
   const deleteProject = async (e, sid) => {
     e.stopPropagation()
     if (!confirm(t('home.deleteConfirm'))) return
     await api.delete(`/api/sessions/${sid}`)
     load()
+  }
+
+  const handleImport = async () => {
+    if (!importFile) return
+    setImporting(true)
+    try {
+      const form = new FormData()
+      form.append('file', importFile)
+      if (importName.trim()) form.append('name', importName.trim())
+      await api.post('/api/projects/import', { form })
+      setImportOpen(false)
+      alert(t('home.importSuccess'))
+      load()
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setImporting(false)
+    }
   }
 
   return (
@@ -41,9 +80,17 @@ export default function HomePage() {
           <h1 className="text-2xl font-black text-slate-900">{t('home.title')}</h1>
           <p className="text-sm text-slate-500 mt-1">{t('home.subtitle')}</p>
         </div>
-        <button onClick={() => navigate('/config')} className="btn-primary flex items-center gap-2 !py-2.5 !px-5">
-          <span className="text-base font-bold">＋</span> {t('home.newProject')}
-        </button>
+        <div className="flex gap-2">
+          {isAdmin && (
+            <button onClick={() => { setImportFile(null); setImportName(''); setImportOpen(true) }}
+              className="btn-secondary flex items-center gap-2 !py-2.5 !px-5">
+              <span className="text-base font-bold">📥</span> {t('home.importProject')}
+            </button>
+          )}
+          <button onClick={() => navigate('/config')} className="btn-primary flex items-center gap-2 !py-2.5 !px-5">
+            <span className="text-base font-bold">＋</span> {t('home.newProject')}
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -88,6 +135,15 @@ export default function HomePage() {
                       >
                         ✏️
                       </button>
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => exportProject(e, s.id)}
+                          className="btn-secondary !px-2 !py-1 !text-xs"
+                          title="Export project (ZIP)"
+                        >
+                          📦
+                        </button>
+                      )}
                       <button
                         onClick={(e) => deleteProject(e, s.id)}
                         className="btn-danger !px-2 !py-1 !text-xs"
@@ -150,6 +206,40 @@ export default function HomePage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* ── Import modal ── */}
+      {importOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setImportOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-slate-900">{t('home.importTitle')}</h2>
+            <p className="text-sm text-slate-500 mt-1">{t('home.importDesc')}</p>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">{t('home.importFile')}</label>
+                <input type="file" accept=".zip"
+                  onChange={e => setImportFile(e.target.files[0])}
+                  className="block w-full text-sm text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">{t('home.importName')}</label>
+                <input type="text" value={importName}
+                  onChange={e => setImportName(e.target.value)}
+                  placeholder={t('home.importNamePlaceholder')}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-5">
+              <button onClick={() => setImportOpen(false)} className="btn-secondary !py-2 !px-4">{t('home.cancel')}</button>
+              <button onClick={handleImport} disabled={!importFile || importing}
+                className="btn-primary !py-2 !px-4 disabled:opacity-50">
+                {importing ? t('home.importing') : t('home.importButton')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

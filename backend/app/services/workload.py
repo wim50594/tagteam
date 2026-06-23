@@ -7,6 +7,7 @@ from __future__ import annotations
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app._sqlmodel_compat import col_in
 from app.models import Annotation, Project, ProjectMember, ProjectItemRef, User as UserModel
 
 
@@ -73,7 +74,7 @@ class WorkloadService:
         user_map: dict[int, str] = {}
         if user_ids:
             users_result = await db.exec(
-                select(UserModel).where(UserModel.id.in_(user_ids))
+                select(UserModel).where(col_in(UserModel.id, user_ids))
             )
             for u in users_result.all():
                 user_map[u.id] = u.username

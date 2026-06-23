@@ -9,22 +9,25 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import json
 import math
 import shutil
+import zipfile
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+import aiofiles
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
+from sqlmodel import asc, desc, select
 
-from app.auth import User, get_current_user, require_admin
+from app._sqlmodel_compat import col_in
+from app.auth import User, get_current_user, hash_password, require_admin
 from app.config import get_settings
 from app.database import (
     cache_delete,
     cache_get,
     cache_key_item,
-    cache_key_progress,
     cache_key_session,
     cache_set,
     get_session,
@@ -38,7 +41,6 @@ from app.models import (
     ProjectItemRef,
     ProjectMember,
     TableUpload,
-    TaxonomyNode,
     User as UserModel,
 )
 from app.services.conflict import ConflictService
@@ -282,7 +284,7 @@ async def create_project(
                 desired[u.lower()] = "annotator"
 
         users_result = await db.exec(
-            select(UserModel).where(UserModel.username.in_(list(desired.keys())))
+            select(UserModel).where(col_in(UserModel.username, list(desired.keys())))
         )
         for user in users_result.all():
             if user.id in added_user_ids:
@@ -330,7 +332,7 @@ async def list_projects(
 ):
     """List projects. Admins see all; others see only their projects."""
     if current_user.is_admin:
-        result = await db.exec(select(Project).order_by(Project.created_at.desc()))
+        result = await db.exec(select(Project).order_by(desc(Project.created_at)))
         projects = result.all()
     else:
         # Get project IDs where user is a member
@@ -343,7 +345,7 @@ async def list_projects(
         if not project_ids:
             return []
         result = await db.exec(
-            select(Project).where(Project.id.in_(project_ids)).order_by(Project.created_at.desc())
+            select(Project).where(col_in(Project.id, project_ids)).order_by(desc(Project.created_at))
         )
         projects = result.all()
 
@@ -357,7 +359,7 @@ async def list_projects(
         user_map: dict[int, UserModel] = {}
         if members:
             user_ids = [m.user_id for m in members]
-            users_result = await db.exec(select(UserModel).where(UserModel.id.in_(user_ids)))
+            users_result = await db.exec(select(UserModel).where(col_in(UserModel.id, user_ids)))
             for u in users_result.all():
                 user_map[u.id] = u
 
@@ -373,17 +375,12 @@ async def list_projects(
         )
         item_ids = [r.item_id for r in refs_result.all()]
 
-        # Get taxonomy count
-        tax_result = await db.exec(
-            select(TaxonomyNode).where(TaxonomyNode.project_id == p.id)
-        )
-        taxonomy_count = len(tax_result.all())
-
-        # Read batches from table (will be replaced with bulk query below)
+        # Read batches from table
         batches = await _read_batches(db, p.id)
         if not batches:
             batches = p.batches or {}
         my_batch = batches.get(current_user.username, [])
+        my_progress = None
         if my_batch:
             annotations_result = await db.exec(
                 select(Annotation)
@@ -391,7 +388,7 @@ async def list_projects(
                     Annotation.project_id == p.id,
                     Annotation.annotator_id == current_user.id,
                 )
-                .order_by(Annotation.item_id, Annotation.version.desc())
+                .order_by(asc(Annotation.item_id), desc(Annotation.version))
             )
             labeled_count = 0
             seen: set[str] = set()
@@ -449,7 +446,7 @@ async def get_project(
     user_map: dict[int, UserModel] = {}
     if members:
         user_ids = [m.user_id for m in members]
-        users_result = await db.exec(select(UserModel).where(UserModel.id.in_(user_ids)))
+        users_result = await db.exec(select(UserModel).where(col_in(UserModel.id, user_ids)))
         for u in users_result.all():
             user_map[u.id] = u
 
@@ -478,7 +475,7 @@ async def get_project(
     # Fetch item names for the response
     items_list = []
     if item_ids:
-        items_result = await db.exec(select(Item).where(Item.id.in_(item_ids)))
+        items_result = await db.exec(select(Item).where(col_in(Item.id, item_ids)))
         for it in items_result.all():
             items_list.append({
                 "item_id": it.id,
@@ -550,9 +547,9 @@ async def update_project(
             new_owner_id = owner_user.id
 
     # Update members with roles (may also handle owner transfer)
+    desired: dict[str, str] = {}
     if "annotators" in payload:
         raw = payload["annotators"]
-        desired: dict[str, str] = {}
         if raw and isinstance(raw[0], dict):
             for entry in raw:
                 desired[entry["username"].lower()] = entry.get("role", "annotator")
@@ -571,7 +568,7 @@ async def update_project(
         # Get existing members
         existing_result = await db.exec(
             select(ProjectMember, UserModel)
-            .join(UserModel, ProjectMember.user_id == UserModel.id)
+            .join(UserModel)
             .where(ProjectMember.project_id == project.id)
         )
         existing: dict[str, ProjectMember] = {
@@ -662,7 +659,7 @@ async def update_project(
             )
             for ann in annotations_result.all():
                 old_labels = set(ann.labels)
-                new_labels = [l for l in ann.labels if l not in removed_paths]
+                new_labels = [label for label in ann.labels if label not in removed_paths]
                 if len(new_labels) != len(old_labels):
                     ann_copy = Annotation(
                         project_id=ann.project_id,
@@ -679,7 +676,7 @@ async def update_project(
             )
             for fd in decisions_result.all():
                 old_labels = set(fd.resolved_labels)
-                new_labels = [l for l in fd.resolved_labels if l not in removed_paths]
+                new_labels = [label for label in fd.resolved_labels if label not in removed_paths]
                 if len(new_labels) != len(old_labels):
                     fd.resolved_labels = new_labels
                     db.add(fd)
@@ -692,7 +689,7 @@ async def update_project(
         # Get current members
         member_result = await db.exec(
             select(ProjectMember, UserModel)
-            .join(UserModel, ProjectMember.user_id == UserModel.id)
+            .join(UserModel)
             .where(ProjectMember.project_id == project.id)
         )
         current_members: dict[str, str] = {}
@@ -912,7 +909,7 @@ async def get_progress(
     display_names: dict[int, str] = {}
     if members:
         user_ids = [m.user_id for m in members]
-        users_result = await db.exec(select(UserModel).where(UserModel.id.in_(user_ids)))
+        users_result = await db.exec(select(UserModel).where(col_in(UserModel.id, user_ids)))
         for u in users_result.all():
             user_map[u.id] = u.username
             display_names[u.id] = u.display_name
@@ -925,7 +922,7 @@ async def get_progress(
     annotations_result = await db.exec(
         select(Annotation)
         .where(Annotation.project_id == project_id)
-        .order_by(Annotation.annotator_id, Annotation.item_id, Annotation.version.desc())
+        .order_by(asc(Annotation.annotator_id), asc(Annotation.item_id), desc(Annotation.version))
     )
     all_annotations = annotations_result.all()
 
@@ -1044,7 +1041,7 @@ async def export_project(
     user_map: dict[int, UserModel] = {}
     if members:
         user_ids = [m.user_id for m in members]
-        users_result = await db.exec(select(UserModel).where(UserModel.id.in_(user_ids)))
+        users_result = await db.exec(select(UserModel).where(col_in(UserModel.id, user_ids)))
         for u in users_result.all():
             user_map[u.id] = u
 
@@ -1132,7 +1129,276 @@ async def export_project(
     )
 
 
-# ── Backward-compatible session endpoints ─────────────────────
+# ── Full project export / import (admin only) ──────────────────
+
+@router.get("/projects/{project_id}/export-full")
+async def export_project_full(
+    project_id: int,
+    _admin: Annotated[User, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_session)],
+):
+    """Export a complete project as a ZIP archive including files, users, and annotations."""
+    project = await db.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        # ── Project metadata ──
+        taxonomy = await TaxonomyService.get_taxonomy_flat(db, project_id)
+        batches = await _read_batches(db, project_id)
+        project_data = {
+            "name": project.name,
+            "mode": project.mode,
+            "k_verifiers": project.k_verifiers,
+            "created_at": project.created_at.isoformat() if project.created_at else "",
+            "taxonomy": taxonomy,
+            "batches": batches,
+        }
+        zf.writestr("project.json", json.dumps(project_data, indent=2))
+
+        # ── Users (project members) ──
+        member_result = await db.exec(
+            select(ProjectMember).where(ProjectMember.project_id == project_id)
+        )
+        members = member_result.all()
+        user_ids = [m.user_id for m in members]
+        user_roles: dict[int, str] = {m.user_id: m.role for m in members}
+        users_data = []
+        if user_ids:
+            users_result = await db.exec(select(UserModel).where(col_in(UserModel.id, user_ids)))
+            for u in users_result.all():
+                users_data.append({
+                    "username": u.username,
+                    "display_name": u.display_name,
+                    "language": u.language,
+                    "role": user_roles.get(u.id, "annotator"),
+                })
+        zf.writestr("users.json", json.dumps(users_data, indent=2))
+
+        # ── Items metadata ──
+        refs_result = await db.exec(
+            select(ProjectItemRef).where(ProjectItemRef.project_id == project_id)
+        )
+        item_ids = [r.item_id for r in refs_result.all()]
+        items_data: dict[str, dict] = {}
+        if item_ids:
+            items_result = await db.exec(select(Item).where(col_in(Item.id, item_ids)))
+            for it in items_result.all():
+                items_data[it.id] = {
+                    "name": it.name,
+                    "type": it.type,
+                    "ext": it.ext,
+                    "filename": it.filename,
+                    "content": it.content,
+                    "size": it.size,
+                    "data": it.data,
+                    "content_hash": it.content_hash,
+                    "source_file": it.source_file,
+                    "source_hash": it.source_hash,
+                }
+        zf.writestr("items.json", json.dumps(items_data, indent=2))
+
+        # ── Files ──
+        media_path = get_settings().media_path
+        for item_id, meta in items_data.items():
+            if meta.get("filename"):
+                file_path = media_path / meta["filename"]
+                if file_path.exists():
+                    zf.write(file_path, f"files/{meta['filename']}")
+
+        # ── Annotations ──
+        annotations_result = await db.exec(
+            select(Annotation)
+            .where(Annotation.project_id == project_id)
+            .order_by(asc(Annotation.item_id), asc(Annotation.annotator_id), asc(Annotation.version))
+        )
+        annotations_data = []
+        user_map: dict[int, str] = {}
+        for ann in annotations_result.all():
+            if ann.annotator_id not in user_map:
+                u = await db.get(UserModel, ann.annotator_id)
+                user_map[ann.annotator_id] = u.username if u else f"user_{ann.annotator_id}"
+            annotations_data.append({
+                "item_id": ann.item_id,
+                "annotator_username": user_map[ann.annotator_id],
+                "labels": ann.labels,
+                "version": ann.version,
+                "created_at": ann.created_at.isoformat() if ann.created_at else "",
+            })
+        zf.writestr("annotations.json", json.dumps(annotations_data, indent=2))
+
+        # ── Final decisions ──
+        decisions_result = await db.exec(
+            select(FinalDecision).where(FinalDecision.project_id == project_id)
+        )
+        decisions_data = []
+        for fd in decisions_result.all():
+            u = await db.get(UserModel, fd.resolved_by)
+            decisions_data.append({
+                "item_id": fd.item_id,
+                "resolved_labels": fd.resolved_labels,
+                "resolved_by_username": u.username if u else "unknown",
+            })
+        zf.writestr("final_decisions.json", json.dumps(decisions_data, indent=2))
+
+    buf.seek(0)
+    safe_name = project.name.replace(" ", "_")[:40]
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename=tagteam_{safe_name}_{project_id}.zip"
+        },
+    )
+
+
+@router.post("/projects/import", status_code=201)
+async def import_project_full(
+    file: UploadFile,
+    _admin: Annotated[User, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    name: str = Form(None),
+):
+    """Import a complete project from a ZIP archive. Optional *name* overrides the original."""
+    if not file.filename or not file.filename.endswith(".zip"):
+        raise HTTPException(status_code=400, detail="Only .zip files are accepted")
+
+    content = await file.read()
+    zf = zipfile.ZipFile(io.BytesIO(content))
+
+    try:
+        # ── Read metadata ──
+        project_data = json.loads(zf.read("project.json"))
+        users_data = json.loads(zf.read("users.json"))
+        items_data: dict = json.loads(zf.read("items.json"))
+        annotations_data: list = json.loads(zf.read("annotations.json"))
+        decisions_data: list = json.loads(zf.read("final_decisions.json"))
+    except (KeyError, json.JSONDecodeError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid archive: missing or corrupt file: {e}")
+
+    # ── Create users (if they don't exist) ──
+    username_map: dict[str, int] = {}  # username -> user_id
+    for u_data in users_data:
+        username = u_data["username"].lower()
+        result = await db.exec(select(UserModel).where(UserModel.username == username))
+        existing = result.first()
+        if existing:
+            username_map[username] = existing.id
+        else:
+            import secrets
+            new_user = UserModel(
+                username=username,
+                display_name=u_data.get("display_name", username),
+                language=u_data.get("language", "en"),
+                hashed_password=hash_password(secrets.token_urlsafe(32)),
+            )
+            db.add(new_user)
+            await db.flush()
+            username_map[username] = new_user.id
+
+    # ── Create project ──
+    project = Project(
+        name=(name or project_data["name"]).strip(),
+        mode=project_data.get("mode", "split"),
+        k_verifiers=project_data.get("k_verifiers", 1),
+        owner_id=username_map.get(users_data[0]["username"], 1),
+    )
+    db.add(project)
+    await db.flush()
+
+    # ── Create members ──
+    for u_data in users_data:
+        uid = username_map[u_data["username"].lower()]
+        role = u_data.get("role", "annotator")
+        db.add(ProjectMember(project_id=project.id, user_id=uid, role=role))
+
+    # ── Import files and create items ──
+    media_path = get_settings().media_path
+    item_id_map: dict[str, str] = {}  # old_id -> new_id (same since content-hash)
+    for old_id, meta in items_data.items():
+        # Always write file from ZIP (overwrite if exists on disk)
+        filename = meta.get("filename")
+        if filename:
+            try:
+                file_data = zf.read(f"files/{filename}")
+                dst = media_path / filename
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                async with aiofiles.open(dst, "wb") as out:
+                    await out.write(file_data)
+            except KeyError:
+                pass  # file not in archive, skip
+
+        # Items are content-addressed — may already exist (same-instance import).
+        # If they do, just link them via ProjectItemRef; otherwise create them.
+        existing = await db.get(Item, old_id)
+        if not existing:
+            item = Item(
+                id=old_id,
+                name=meta.get("name", ""),
+                type=meta.get("type", "text"),
+                ext=meta.get("ext"),
+                filename=filename,
+                content=meta.get("content"),
+                size=meta.get("size"),
+                data=meta.get("data"),
+                content_hash=meta.get("content_hash"),
+                source_file=meta.get("source_file"),
+                source_hash=meta.get("source_hash"),
+            )
+            db.add(item)
+
+        # Link item to project (even if it already existed)
+        db.add(ProjectItemRef(item_id=old_id, project_id=project.id))
+        item_id_map[old_id] = old_id
+
+    # ── Import taxonomy ──
+    taxonomy = project_data.get("taxonomy", [])
+    if taxonomy:
+        await TaxonomyService.import_taxonomy(db, project.id, taxonomy)
+
+    # ── Import batches ──
+    batches = project_data.get("batches", {})
+    if batches:
+        await _write_batches(db, project.id, batches)
+
+    # ── Import annotations ──
+    for ann_data in annotations_data:
+        username = ann_data["annotator_username"].lower()
+        annotator_id = username_map.get(username)
+        if not annotator_id:
+            continue
+        item_id = ann_data["item_id"]
+        if item_id not in item_id_map:
+            continue
+        annotation = Annotation(
+            project_id=project.id,
+            item_id=item_id,
+            annotator_id=annotator_id,
+            labels=ann_data.get("labels", []),
+            version=ann_data.get("version", 1),
+        )
+        db.add(annotation)
+
+    # ── Import final decisions ──
+    for fd_data in decisions_data:
+        username = fd_data["resolved_by_username"].lower()
+        resolver_id = username_map.get(username)
+        if not resolver_id:
+            continue
+        item_id = fd_data["item_id"]
+        if item_id not in item_id_map:
+            continue
+        db.add(FinalDecision(
+            project_id=project.id,
+            item_id=item_id,
+            resolved_labels=fd_data.get("resolved_labels", []),
+            resolved_by=resolver_id,
+        ))
+
+    await db.commit()
+
+    return {"status": "ok", "id": str(project.id), "name": project.name}
 
 @router.post("/sessions/save-full")
 async def save_session_compat(

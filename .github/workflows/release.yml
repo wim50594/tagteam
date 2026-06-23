@@ -7,9 +7,16 @@ on:
 
 permissions: { contents: write, packages: write }
 
+# Cancel in-progress runs on the same branch — prevents race
+# conditions when multiple commits are pushed in quick succession.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     strategy:
       matrix:
         component: [backend, frontend]
@@ -17,7 +24,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+          fetch-tags: true
+
       - name: Bump version and push tag
         id: auto_tag
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -26,6 +34,33 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
           DEFAULT_BUMP: patch
+        continue-on-error: true
+
+      # ── Determine version ──────────────────────────────────
+      # Manual tag push: use the tag as-is.
+      # Auto tag success: use the newly created tag.
+      # Auto tag failed: the tag already exists from a previous
+      #   partial run → fall back to the highest existing tag.
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${{ github.ref_name }}"
+          elif [[ -n "${{ steps.auto_tag.outputs.new_tag }}" ]]; then
+            VERSION="${{ steps.auto_tag.outputs.new_tag }}"
+          else
+            git fetch --tags --force
+            VERSION=$(git tag -l 'v*' --sort=-v:refname | head -1)
+            if [[ -z "$VERSION" ]]; then
+              echo "ERROR: No version tag found"
+              exit 1
+            fi
+            echo "::notice::Auto-bump skipped (tag exists). Using $VERSION"
+          fi
+
+          CLEAN_VERSION="${VERSION#v}"
+          echo "value=$CLEAN_VERSION" >> "$GITHUB_OUTPUT"
+          echo "raw_tag=$VERSION" >> "$GITHUB_OUTPUT"
 
       # Docker setups
       - uses: docker/setup-qemu-action@v3
@@ -35,25 +70,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # handles manual tags, auto tags, and provides a dev fallback
-      - name: Determine app version
-        id: version
-        run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            VERSION="${{ github.ref_name }}"
-          elif [[ -n "${{ steps.auto_tag.outputs.new_tag }}" ]]; then
-            VERSION="${{ steps.auto_tag.outputs.new_tag }}"
-          else
-            echo "ERROR: No valid tag found and auto-bump failed!"
-            exit 1
-          fi
-          
-          CLEAN_VERSION="${VERSION#v}"
-          echo "value=$CLEAN_VERSION" >> "$GITHUB_OUTPUT"
-          echo "raw_tag=$VERSION" >> "$GITHUB_OUTPUT"
-
       - name: Generate Docker metadata
-        if: steps.version.outputs.value != 'dev'
         id: meta
         uses: docker/metadata-action@v5
         with:

@@ -20,11 +20,10 @@ from app.auth import (
     require_admin,
     set_refresh_cookie,
     verify_password,
-    promote_first_user,
 )
 from app.config import get_settings
 from app.database import get_session
-from app.models import User, Invitation, ProjectMember, Project
+from app.models import User, Project
 from app.services.iam import IAMService
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])

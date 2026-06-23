@@ -22,7 +22,6 @@ jobs:
         env:
           DATABASE_URL: "sqlite+aiosqlite:///:memory:"
           JWT_SECRET: "ci-test-secret-do-not-use-in-prod"
-          REDIS_URL: ""
 
   frontend:
     runs-on: ubuntu-latest

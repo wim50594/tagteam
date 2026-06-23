@@ -3,13 +3,12 @@ Conflict resolution service – immutable annotation management.
 """
 from __future__ import annotations
 
-from typing import Sequence
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models import Annotation, FinalDecision, Project, ProjectMember, User
-from app.services.taxonomy import TaxonomyService
+from app._sqlmodel_compat import col_in
+from app.models import Annotation, FinalDecision, Project, User
 
 
 class ConflictService:
@@ -199,7 +198,7 @@ class ConflictService:
         user_map: dict[int, User] = {}
         if annotator_ids_from_anns:
             users_result = await db.exec(
-                select(User).where(User.id.in_(list(annotator_ids_from_anns)))
+                select(User).where(col_in(User.id, list(annotator_ids_from_anns)))
             )
             for u in users_result.all():
                 user_map[u.id] = u

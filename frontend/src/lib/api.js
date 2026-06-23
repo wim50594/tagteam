@@ -109,7 +109,12 @@ async function request(method, path, opts = {}) {
       clearAuthAndRedirect();
     }
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    const e = new Error(err.detail || "Request failed");
+    // FastAPI 422 returns detail as an array of validation errors
+    let message = err.detail || "Request failed";
+    if (Array.isArray(message)) {
+      message = message.map((e) => e.msg || JSON.stringify(e)).join("; ");
+    }
+    const e = new Error(message);
     e.status = res.status;
     throw e;
   }
@@ -123,6 +128,7 @@ async function request(method, path, opts = {}) {
 export const api = {
   get: (path, opts) => request("GET", path, opts),
   post: (path, opts) => request("POST", path, opts),
+  put: (path, opts) => request("PUT", path, opts),
   delete: (path, opts) => request("DELETE", path, opts),
 
   // Auth

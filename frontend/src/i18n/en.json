@@ -1,0 +1,188 @@
+{
+  "app": {
+    "name": "TagTeam",
+    "version": "v{{version}}"
+  },
+  "nav": {
+    "projects": "Projects",
+    "users": "Users",
+    "signOut": "Sign out",
+    "profile": "Profile"
+  },
+  "home": {
+    "title": "Projects",
+    "subtitle": "Select a project to start annotating.",
+    "newProject": "New project",
+    "noProjects": "No projects yet.",
+    "createFirst": "Create the first project →",
+    "delete": "Delete",
+    "edit": "Edit project",
+    "deleteConfirm": "Delete this project and all its data permanently?",
+    "users": "Users",
+    "items": "Items",
+    "taxonomy": "Taxonomy",
+    "labels": "labels",
+    "openWorkspace": "Open workspace →",
+    "reviewExport": "Review & Export",
+    "verification": "Verification",
+    "role": {
+      "owner": "owner",
+      "maintainer": "maintainer",
+      "annotator": "annotator",
+      "admin": "admin",
+      "user": "user"
+    }
+  },
+  "config": {
+    "title": "Configure project",
+    "editing": "Editing project",
+    "backToProjects": "← Back to projects",
+    "steps": {
+      "data": "Data",
+      "taxonomy": "Taxonomy",
+      "team": "Team & Start"
+    },
+    "step1": {
+      "title": "Step 1: Upload data",
+      "desc": "Supported: images, PDFs, Word documents, text, spreadsheets",
+      "dropFiles": "Drop files or folder here",
+      "uploading": "Uploading…",
+      "existingItems": "existing item(s) — click ✕ to remove",
+      "existingNotice": "This project already has {{count}} item(s). Upload additional files below to add more items.",
+      "removeAll": "Remove all",
+      "columnsDetected": "Table columns detected – select which to show during annotation:",
+      "taxonomyNext": "Taxonomy →"
+    },
+    "step2": {
+      "title": "Step 2: Upload taxonomy",
+      "desc": "CSV/TSV or TXT (one class per line, > for hierarchy)",
+      "dropFile": "Drop taxonomy file (CSV, TSV, TXT)",
+      "manualTitle": "✍️ Or type / paste labels manually",
+      "manualDesc": "One label per line. Use > for hierarchy, e.g. Animals > Mammals > Dogs",
+      "labelsLoaded": "{{count}} labels loaded from \"{{file}}\"",
+      "labelsParsed": "{{count}} labels parsed from text",
+      "tableHeaders": ["Name", "Full path", "Level"],
+      "back": "← Back",
+      "teamNext": "Team & Start →"
+    },
+    "step3": {
+      "title": "Step 3: Configure team & launch",
+      "projectName": "Project name",
+      "projectNamePlaceholder": "e.g. Literature Screening Q1 2025",
+      "team": "Team",
+      "teamDesc": "Add users and assign their project role.",
+      "owner": "Project owner",
+      "transferTo": "Transfer to…",
+      "role": {
+        "annotator": "Annotator",
+        "maintainer": "Maintainer",
+        "owner": "Owner"
+      },
+      "addUser": "Search users to add…",
+      "batchMode": "Batch mode:",
+      "split": "Split (round-robin)",
+      "splitDesc": "Each item is annotated by exactly one person. Fast, no cross-validation.",
+      "verification": "Verification (k people per item)",
+      "verificationDesc": "Each item is reviewed by multiple people; work is distributed evenly. Conflicts are visible in Review.",
+      "reviewersPerItem": "Reviewers per item:",
+      "of": "of",
+      "available": "available",
+      "workloadEstimate": "Workload estimate:",
+      "back": "← Back",
+      "launch": "🚀 Launch project",
+      "save": "💾 Save changes",
+      "creating": "Creating…",
+      "saving": "Saving…"
+    },
+    "errors": {
+      "nameRequired": "Project name is required",
+      "userRequired": "At least one user is required"
+    }
+  },
+  "workspace": {
+    "loading": "Loading workspace…",
+    "user": "User:",
+    "progress": "Progress",
+    "classify": "Classify",
+    "saveNext": "Save & Next →",
+    "next": "Next →",
+    "back": "← Back",
+    "skip": "Skip",
+    "batchComplete": "Batch complete!",
+    "noTagHint": "No tag selected – choose at least one or skip."
+  },
+  "tagsearch": {
+    "placeholder": "Click for suggestions or type to search…",
+    "noTaxonomy": "No taxonomy loaded",
+    "topLevel": "Top-level categories"
+  },
+  "review": {
+    "title": "Review & Export",
+    "rawPerUser": "Raw (per user)",
+    "merged": "Merged (consolidated)",
+    "openConflicts": "open conflict",
+    "openConflicts_plural": "open conflicts",
+    "progressPerUser": "Progress per user",
+    "exportCsv": "Export CSV 📥",
+    "backToWorkspace": "← Back to workspace",
+    "conflicts": "Conflicts",
+    "noConflicts": "No conflicts found",
+    "resolved": "resolved",
+    "resolve": "Resolve",
+    "resolveTitle": "Resolve conflict",
+    "selectFinalTags": "Select final tags:",
+    "selectAll": "Select all",
+    "clear": "Clear",
+    "cancel": "Cancel",
+    "saveResolution": "Save resolution"
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Update your account information.",
+    "displayName": "Display name",
+    "username": "Username",
+    "newPassword": "New password",
+    "passwordHint": "Min. 6 characters. Leave empty to keep unchanged.",
+    "usernameHint": "Lowercase letters, numbers, _ and - only.",
+    "saveChanges": "Save changes",
+    "saving": "Saving…",
+    "noChanges": "No changes to save.",
+    "updated": "Profile updated successfully.",
+    "language": "Language"
+  },
+  "usersPage": {
+    "title": "Users",
+    "inviteTitle": "Invite user to project",
+    "selectProject": "Select project",
+    "role": "Role",
+    "generateInvite": "Generate invite link",
+    "generating": "Generating…",
+    "inviteSuccess": "Invitation link (copy and send to the user):",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "expires": "Expires",
+    "createTitle": "Create new user",
+    "createUser": "Create user",
+    "creating": "Creating…"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "username": "Username",
+    "password": "Password",
+    "loginButton": "Sign in",
+    "registerButton": "Create account",
+    "noAccount": "No account yet?",
+    "hasAccount": "Already have an account?",
+    "registerHere": "Register here",
+    "loginHere": "Login here",
+    "displayName": "Display name",
+    "inviteToken": "Invitation token",
+    "needsInvite": "Ask your admin for an invitation link."
+  },
+  "common": {
+    "loading": "Loading…",
+    "remove": "Remove",
+    "unknown": "Unknown"
+  }
+}

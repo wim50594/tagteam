@@ -2,16 +2,15 @@ services:
   backend:
     build:
       context: ./backend
-    env_file:
-      - .env
     environment:
       - DATABASE_URL=sqlite+aiosqlite:////data/tagteam.db
       - COOKIE_SECURE=false
-      - JWT_SECRET=${JWT_SECRET:-change_me_to_a_long_random_secret_string}
-      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme123}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173}
-      - MEDIA_DIR=${MEDIA_DIR:-/data/media}
+      - JWT_SECRET=dev-secret-for-docker-local-use
+      - ADMIN_BOOTSTRAP=false
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=changeme123
+      - MEDIA_DIR=/data/media
+      - CORS_ORIGINS=http://localhost:5173
     volumes:
       - ./backend/app:/app/app
       - /app/.venv

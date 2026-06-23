@@ -1,4 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { formatVersionBadge, useVersion } from '../lib/version';
 
 import { useAuth } from '../lib/auth';
@@ -6,11 +7,12 @@ import { APP_NAME } from '../lib/constants';
 
 const ROLE_BADGE = {
   admin: 'bg-violet-100 text-violet-800 border-violet-200',
-  annotator: 'bg-teal-100 text-teal-800 border-teal-200',
+  user: 'bg-teal-100 text-teal-800 border-teal-200',
 }
 
 export default function Layout() {
-  const { user, isAdmin, logout } = useAuth()
+  const { user, isAdmin, logout, setLanguage } = useAuth()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
   const version = useVersion()
@@ -46,19 +48,29 @@ export default function Layout() {
 
           {/* Nav links */}
           <nav className="flex items-center gap-1">
-            {navLink('/', 'Projects')}
-            {isAdmin && navLink('/users', 'Users')}
+            {navLink('/', t('nav.projects'))}
+            {isAdmin && navLink('/users', t('nav.users'))}
           </nav>
+
+          {/* Language switcher */}
+          <select
+            value={user?.language || 'en'}
+            onChange={(e) => setLanguage(e.target.value)}
+            className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-600 font-medium hover:border-indigo-300 focus:outline-none focus:border-indigo-400 transition"
+          >
+            <option value="en">🇬🇧 EN</option>
+            <option value="de">🇩🇪 DE</option>
+          </select>
 
           {/* User badge + logout */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <div className="text-right hidden sm:block">
+              <Link to="/profile" className="text-right hidden sm:block hover:opacity-80 transition">
                 <p className="text-sm font-bold text-slate-800 leading-none">
                   {user?.display_name}
                 </p>
                 <p className="text-xs text-slate-400 leading-none mt-0.5">@{user?.username}</p>
-              </div>
+              </Link>
               <span
                 className={`text-xs font-bold px-2 py-0.5 rounded-full border ${ROLE_BADGE[user?.role] ?? ''}`}
               >
@@ -69,7 +81,7 @@ export default function Layout() {
               onClick={handleLogout}
               className="btn-secondary !px-3 !py-1.5 !text-xs"
             >
-              Sign out
+              {t('nav.signOut')}
             </button>
           </div>
         </div>

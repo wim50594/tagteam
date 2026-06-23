@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react'
+import { useTranslation } from 'react-i18next'
 
 function getAncestorPaths(node, taxonomy) {
   if (!node?.parent) return []
@@ -7,12 +8,24 @@ function getAncestorPaths(node, taxonomy) {
   return [...getAncestorPaths(parent, taxonomy), parent.full_path]
 }
 
-export default function TagSearch({ taxonomy, selected, onChange }) {
+/** Keep only the deepest label per hierarchy path. */
+function collapseHierarchy(labels) {
+  const sorted = [...new Set(labels)].sort()
+  return sorted.filter((a) => !sorted.some((b) => b !== a && b.startsWith(a + ' > ')))
+}
+
+const TagSearch = forwardRef(function TagSearch({ taxonomy, selected, onChange }, ref) {
+  const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [highlighted, setHighlighted] = useState(-1)
   const inputRef = useRef()
   const listRef = useRef()
+
+  useImperativeHandle(ref, () => ({
+    focus: () => inputRef.current?.focus(),
+    blur: () => inputRef.current?.blur(),
+  }))
 
   // Close on outside click
   useEffect(() => {
@@ -31,18 +44,41 @@ export default function TagSearch({ taxonomy, selected, onChange }) {
 
   useEffect(() => { setHighlighted(-1) }, [query])
 
+  // Display only deepest labels (collapsed), with full path text
+  const displayLabels = useMemo(() => collapseHierarchy(selected), [selected])
+
   const addTag = (item) => {
     const ancestors = getAncestorPaths(item, taxonomy)
     const toAdd = [...ancestors, item.full_path].filter((fp) => !selected.includes(fp))
     if (toAdd.length) onChange([...selected, ...toAdd])
     setQuery('')
-    inputRef.current?.focus()
+    setOpen(false)
+    inputRef.current?.blur()
   }
 
-  const removeTag = (fp) => onChange(selected.filter((x) => x !== fp))
+  const removeTag = (fullPath) => {
+    const ancestors = new Set(getAncestorPaths(taxonomy.find((t) => t.full_path === fullPath), taxonomy))
+    ancestors.add(fullPath)
+    const remaining = selected.filter((fp) => !ancestors.has(fp))
+    const neededAncestors = new Set()
+    for (const fp of remaining) {
+      const node = taxonomy.find((t) => t.full_path === fp)
+      if (node) {
+        for (const a of getAncestorPaths(node, taxonomy)) {
+          neededAncestors.add(a)
+        }
+      }
+    }
+    const final = remaining.filter((fp) => {
+      if (!ancestors.has(fp)) return true
+      return neededAncestors.has(fp)
+    })
+    onChange(final)
+  }
 
   const handleKeyDown = (e) => {
     if (!open || !suggestions.length) return
+    if (e.ctrlKey || e.metaKey) return
     if (e.key === 'ArrowDown') { e.preventDefault(); setHighlighted((h) => Math.min(h + 1, suggestions.length - 1)) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlighted((h) => Math.max(h - 1, 0)) }
     else if ((e.key === 'Enter' || e.key === 'Tab') && highlighted >= 0) {
@@ -50,7 +86,7 @@ export default function TagSearch({ taxonomy, selected, onChange }) {
       const item = suggestions[highlighted]
       if (item && !selected.includes(item.full_path)) addTag(item)
     }
-    else if (e.key === 'Escape') setOpen(false)
+    else if (e.key === 'Escape') { inputRef.current?.blur(); setOpen(false) }
   }
 
   return (
@@ -61,7 +97,7 @@ export default function TagSearch({ taxonomy, selected, onChange }) {
           type="text"
           value={query}
           disabled={!taxonomy.length}
-          placeholder={taxonomy.length ? 'Click for suggestions or type to search…' : 'No taxonomy loaded'}
+          placeholder={taxonomy.length ? t('tagsearch.placeholder') : t('tagsearch.noTaxonomy')}
           onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
@@ -74,7 +110,7 @@ export default function TagSearch({ taxonomy, selected, onChange }) {
           >
             {!query && (
               <li className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                Top-level categories
+                {t('tagsearch.topLevel')}
               </li>
             )}
             {suggestions.map((item, idx) => (
@@ -95,11 +131,11 @@ export default function TagSearch({ taxonomy, selected, onChange }) {
         )}
       </div>
 
-      {selected.length > 0 && (
+      {displayLabels.length > 0 && (
         <div className="flex flex-wrap gap-1.5 p-2 border border-slate-100 rounded-lg bg-slate-50 min-h-9">
-          {selected.map((fp) => (
+          {displayLabels.map((fp) => (
             <span key={fp} className="tag-chip">
-              {fp.split(' > ').pop()}
+              {fp}
               <button onClick={() => removeTag(fp)} className="ml-0.5 hover:text-indigo-600 text-indigo-400 font-bold">×</button>
             </span>
           ))}
@@ -107,4 +143,6 @@ export default function TagSearch({ taxonomy, selected, onChange }) {
       )}
     </div>
   )
-}
+})
+
+export default TagSearch

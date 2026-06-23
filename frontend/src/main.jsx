@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AuthContext, useProvideAuth } from './lib/auth'
+import './i18n'
 import './index.css'
 
 function Root() {

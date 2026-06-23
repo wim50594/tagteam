@@ -2,7 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: postgres-data
-  namespace: tagteam
+  namespace: tagteams
 spec:
   accessModes: ["ReadWriteOnce"]
   resources:
@@ -13,7 +13,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres
-  namespace: tagteam
+  namespace: tagteams
 spec:
   replicas: 1
   strategy:
@@ -33,10 +33,10 @@ spec:
             - containerPort: 5432
           envFrom:
             - secretRef:
-                name: tagteam-secrets
+                name: tagteams-secrets
           env:
             - name: POSTGRES_DB
-              value: tagteam
+              value: tagteams
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
@@ -60,7 +60,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgres
-  namespace: tagteam
+  namespace: tagteams
 spec:
   selector:
     app: postgres

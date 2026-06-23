@@ -7,9 +7,9 @@ os.environ.setdefault("REDIS_URL", "")
 
 
 
-@pytest_asyncio.fixture(autouse=True)
+@pytest_asyncio.fixture
 async def setup_db():
-    """Recreate tables fresh before each test."""
+    """Recreate tables fresh before each DB test."""
     from app.database import engine
     from sqlmodel import SQLModel
     async with engine.begin() as conn:
@@ -18,8 +18,8 @@ async def setup_db():
 
 
 @pytest_asyncio.fixture
-async def db():
-    """Provide a database session for a test."""
+async def db(setup_db):
+    """Provide a database session for a test (depends on setup_db)."""
     from app.database import async_session_factory
     async with async_session_factory() as session:
         yield session

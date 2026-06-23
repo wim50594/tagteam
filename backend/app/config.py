@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     admin_password: str = ""
 
     # Primary relational database (PostgreSQL, SQLite, ...)
-    database_url: str = "sqlite+aiosqlite:///./data/tagteam.db"
+    database_url: str = "sqlite+aiosqlite:///./data/tagteams.db"
 
     # Redis is optional and used only as a cache. If unset, caching is
     # simply skipped and everything falls back to the RDBMS.

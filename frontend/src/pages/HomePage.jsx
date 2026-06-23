@@ -40,7 +40,7 @@ export default function HomePage() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `tagteam_project_${sid}.zip`
+      a.download = `tagteams_project_${sid}.zip`
       a.click()
       URL.revokeObjectURL(url)
     } catch (err) {

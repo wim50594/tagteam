@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "TagTeam",
+    "name": "TagTeams",
     "version": "v{{version}}"
   },
   "nav": {
@@ -26,7 +26,7 @@
     "reviewExport": "Review & Export",
     "importProject": "Projekt importieren",
     "importTitle": "Projekt importieren",
-    "importDesc": "Laden Sie eine ZIP-Datei hoch, die aus einer anderen TagTeam-Instanz exportiert wurde.",
+    "importDesc": "Laden Sie eine ZIP-Datei hoch, die aus einer anderen TagTeams-Instanz exportiert wurde.",
     "importName": "Projektname",
     "importNamePlaceholder": "Leer lassen, um den Originalnamen beizubehalten",
     "importFile": "ZIP-Datei",

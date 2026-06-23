@@ -1,5 +1,5 @@
 """
-TagTeam Suite – FastAPI application entry point.
+TagTeams Suite – FastAPI application entry point.
 Mounts all routers; handles lifespan events.
 """
 from contextlib import asynccontextmanager
@@ -31,7 +31,7 @@ async def lifespan(_app: FastAPI):
 settings = get_settings()
 
 app = FastAPI(
-    title="TagTeam API",
+    title="TagTeams API",
     version=settings.app_version,
     lifespan=lifespan,
 )

@@ -1,7 +1,12 @@
 name: Release
 on:
-  push:
+  # Triggered AFTER CI passes on main (see ci.yml)
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
+  # Re-run a failed release by pushing a v* tag manually
+  push:
     tags: ["v*.*.*"]
   workflow_dispatch:
 
@@ -15,6 +20,11 @@ concurrency:
 
 jobs:
   publish:
+    # Only run when CI succeeded (workflow_run) or when triggered
+    # manually / by tag push.
+    if: |
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -23,12 +33,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # When triggered by CI, checkout the exact SHA that passed.
+          # Otherwise use the triggering ref (tag push / manual dispatch).
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
           fetch-depth: 0
           fetch-tags: true
 
       - name: Bump version and push tag
         id: auto_tag
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.event_name == 'workflow_run'
         uses: anothrNick/github-tag-action@1.71.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -37,14 +50,15 @@ jobs:
         continue-on-error: true
 
       # ── Determine version ──────────────────────────────────
-      # Manual tag push: use the tag as-is.
-      # Auto tag success: use the newly created tag.
-      # Auto tag failed: the tag already exists from a previous
-      #   partial run → fall back to the highest existing tag.
+      # Tag push / dispatch: use the tag as-is.
+      # Workflow_run   (CI passed): auto-bump succeeded → use new tag.
+      # Workflow_run   (CI passed): auto-bump failed   → tag already
+      #   exists from a previous partial run, use highest existing.
       - name: Determine version
         id: version
         run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+          if [[ "${{ github.event_name }}" != "workflow_run" ]]; then
+            # Manual tag push or workflow_dispatch — use the ref
             VERSION="${{ github.ref_name }}"
           elif [[ -n "${{ steps.auto_tag.outputs.new_tag }}" ]]; then
             VERSION="${{ steps.auto_tag.outputs.new_tag }}"
@@ -74,7 +88,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: docker.io/lehrstuhlkesdogan/tagteam-${{ matrix.component }}
+          images: docker.io/lehrstuhlkesdogan/tagteams-${{ matrix.component }}
           tags: |
             type=semver,pattern={{version}},value=${{ steps.version.outputs.raw_tag }}
             type=semver,pattern={{major}}.{{minor}},value=${{ steps.version.outputs.raw_tag }}

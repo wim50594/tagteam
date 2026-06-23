@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: tagteam-config
-  namespace: tagteam
+  name: tagteams-config
+  namespace: tagteams
 data:
   REDIS_URL: "redis://redis:6379"
   CACHE_TTL_SECONDS: "300"

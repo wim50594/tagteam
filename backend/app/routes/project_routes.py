@@ -1124,7 +1124,7 @@ async def export_project(
         iter([output.getvalue()]),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f"attachment; filename=tagteam_{str(project_id)[:8]}_{mode}.csv"
+            "Content-Disposition": f"attachment; filename=tagteams_{str(project_id)[:8]}_{mode}.csv"
         },
     )
 
@@ -1248,7 +1248,7 @@ async def export_project_full(
         iter([buf.getvalue()]),
         media_type="application/zip",
         headers={
-            "Content-Disposition": f"attachment; filename=tagteam_{safe_name}_{project_id}.zip"
+            "Content-Disposition": f"attachment; filename=tagteams_{safe_name}_{project_id}.zip"
         },
     )
 

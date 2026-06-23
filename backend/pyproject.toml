@@ -1,7 +1,7 @@
 [project]
-name = "tagteam-backend"
+name = "tagteams-backend"
 version = "3.1.0"
-description = "TagTeam API - universal annotation tool backend"
+description = "TagTeams API - universal annotation tool backend"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",

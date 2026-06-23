@@ -1,4 +1,4 @@
-# 🏷️ TagTeam
+# 🏷️ TagTeams
 
 A universal annotation tool for images, PDFs, Word documents, texts, and spreadsheets designed for seamless team collaboration and structured taxonomies.
 
@@ -75,7 +75,7 @@ This starts:
 
 ## ⚙️ Configuration & Setup
 
-TagTeam is fully configured using environment variables. Before starting the containers, create your `.env` file from the template:
+TagTeams is fully configured using environment variables. Before starting the containers, create your `.env` file from the template:
 
 ```bash
 cp env.example .env

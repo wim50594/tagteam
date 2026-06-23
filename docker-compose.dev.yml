@@ -3,7 +3,7 @@ services:
     build:
       context: ./backend
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:////data/tagteam.db
+      - DATABASE_URL=sqlite+aiosqlite:////data/tagteams.db
       - COOKIE_SECURE=false
       - JWT_SECRET=dev-secret-for-docker-local-use
       - ADMIN_BOOTSTRAP=false
